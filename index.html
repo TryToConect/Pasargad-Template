@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PasarGuard Subscription</title>
+<meta name="description" content="Subscription dashboard">
+<meta name="theme-color" content="#080B10">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex, nofollow">
+
+<!-- Single-file favicon (no external file needed) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%2308201E'/%3E%3Cpath d='M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z' fill='none' stroke='%2333C7BD' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E">
+
+<!-- Single-file PWA manifest via data URI, so "Add to Home Screen" works
+     app-like without needing a second file next to this one. -->
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Subscription%22%2C%22short_name%22%3A%22Sub%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23080B10%22%2C%22theme_color%22%3A%22%23080B10%22%7D">
+
+<!-- Optional progressive enhancement: a proper Persian UI typeface. This is
+     the ONLY external network request this page ever makes on its own —
+     if it's blocked or slow, the system-font fallback stack in the CSS
+     below still looks perfectly fine, nothing breaks. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   PasarGuard Subscription Dashboard — stylesheet
+   Design language: quiet dark glass, one signal color, state-driven glow.
+   ========================================================================== */
+
+:root {
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+  --gap: 16px;
+  --shadow-soft: 0 12px 32px -12px rgba(0, 0, 0, 0.45);
+  --dur-fast: 160ms;
+  --dur-med: 340ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --clr-signal: #33C7BD;      /* data / primary */
+  --clr-signal-ink: #08201E;
+  --clr-amber: #F0A63B;       /* time-remaining */
+  --clr-danger: #EF5A72;      /* expired / critical */
+  --clr-ok: #3ED694;          /* active status */
+  --clr-hold: #8C93F0;        /* on-hold / unknown status */
+}
+
+[data-theme="dark"] {
+  --bg-0: #080B10;
+  --bg-1: #0E131A;
+  --bg-grad-a: #0B121B;
+  --bg-grad-b: #080A0E;
+  --glass-fill: rgba(255, 255, 255, 0.045);
+  --glass-fill-strong: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-border-strong: rgba(255, 255, 255, 0.16);
+  --ink-1: #EEF2F6;
+  --ink-2: #98A2B0;
+  --ink-3: #5B6572;
+  --track: rgba(255, 255, 255, 0.08);
+  --overlay: rgba(4, 6, 9, 0.6);
+  --input-bg: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="light"] {
+  --bg-0: #EEF1F4;
+  --bg-1: #F7F8FA;
+  --bg-grad-a: #F2F4F7;
+  --bg-grad-b: #E7EAEE;
+  --glass-fill: rgba(255, 255, 255, 0.72);
+  --glass-fill-strong: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(15, 23, 32, 0.08);
+  --glass-border-strong: rgba(15, 23, 32, 0.14);
+  --ink-1: #131A21;
+  --ink-2: #5B6572;
+  --ink-3: #8B96A5;
+  --track: rgba(15, 23, 32, 0.08);
+  --overlay: rgba(20, 24, 30, 0.35);
+  --input-bg: rgba(15, 23, 32, 0.045);
+  --shadow-soft: 0 12px 32px -14px rgba(30, 40, 55, 0.22);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+html {
+  background: var(--bg-0);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% -10%, color-mix(in srgb, var(--clr-signal) 14%, transparent), transparent 45%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--clr-amber) 10%, transparent), transparent 40%),
+    linear-gradient(180deg, var(--bg-grad-a), var(--bg-grad-b) 70%);
+  color: var(--ink-1);
+  font-family: 'Vazirmatn', 'Segoe UI', Tahoma, 'Iranian Sans', system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01" on;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
+  transition: background-color var(--dur-med) var(--ease), color var(--dur-med) var(--ease);
+  padding-bottom: 96px; /* room for the sticky quick-add bar */
+}
+
+html[dir="rtl"] body { direction: rtl; }
+html[dir="ltr"] body { direction: ltr; }
+
+:focus-visible {
+  outline: 2px solid var(--clr-signal);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+button { font-family: inherit; }
+
+.app-shell {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 16px 12px;
+}
+
+/* ---------------- Topbar ---------------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--clr-signal) 30%, transparent), transparent);
+  border: 1px solid var(--glass-border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.brand-name {
+  font-weight: 700;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-fill);
+  color: var(--ink-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.icon-btn:hover { background: var(--glass-fill-strong); border-color: var(--glass-border-strong); }
+.icon-btn:active { transform: scale(0.92); }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* ---------------- Announcement ---------------- */
+.announce {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--clr-amber) 14%, var(--glass-fill));
+  border: 1px solid color-mix(in srgb, var(--clr-amber) 28%, var(--glass-border));
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  animation: slide-in var(--dur-med) var(--ease);
+}
+.announce a { color: var(--ink-1); font-weight: 700; text-decoration: underline; }
+.announce-text { flex: 1; min-width: 0; }
+
+/* ---------------- Glass card base ---------------- */
+.card {
+  position: relative;
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-soft);
+  padding: 18px;
+  margin-bottom: 14px;
+  animation: rise-in var(--dur-med) var(--ease) both;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------------- Status badge ---------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--badge-c) 16%, transparent);
+  color: var(--badge-c);
+  border: 1px solid color-mix(in srgb, var(--badge-c) 34%, transparent);
+}
+html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
+.badge::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--badge-c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--badge-c) 25%, transparent);
+}
+.badge.is-active { --badge-c: var(--clr-ok); }
+.badge.is-limited { --badge-c: var(--clr-amber); }
+.badge.is-expired { --badge-c: var(--clr-danger); }
+.badge.is-hold, .badge.is-unknown { --badge-c: var(--clr-hold); }
+
+/* ---------------- Rings ---------------- */
+.rings-row {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  padding: 6px 0 18px;
+  flex-wrap: wrap;
+}
+
+.ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 148px;
+}
+
+.ring-svg-box {
+  position: relative;
+  width: 128px;
+  height: 128px;
+}
+.ring-svg-box svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--track); stroke-width: 10; }
+.ring-progress {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 900ms var(--ease), stroke 400ms var(--ease);
+}
+.ring-glow {
+  fill: none;
+  stroke-width: 16;
+  stroke-linecap: round;
+  opacity: 0.35;
+  filter: blur(7px);
+  transition: stroke-dashoffset 900ms var(--ease), stroke 400ms var(--ease);
+}
+.ring-wrap[data-severity="warn"] .ring-glow,
+.ring-wrap[data-severity="danger"] .ring-glow {
+  animation: pulse-glow 2.6s ease-in-out infinite;
+}
+
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.ring-value {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.ring-unit { font-size: 11px; color: var(--ink-2); font-weight: 600; margin-top: 1px; }
+.ring-caption { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+
+/* ---------------- Meta row (expiry / plan) ---------------- */
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.meta-item { text-align: center; flex: 1; min-width: 110px; }
+.meta-item + .meta-item { border-inline-start: 1px solid var(--glass-border); }
+.meta-label { font-size: 11.5px; color: var(--ink-2); margin-bottom: 3px; }
+.meta-value { font-size: 13.5px; font-weight: 700; cursor: default; }
+
+/* ---------------- Buttons ---------------- */
+.actions-row { display: flex; gap: 10px; }
+
+.btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 13px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+.btn-primary {
+  background: linear-gradient(155deg, var(--clr-signal), color-mix(in srgb, var(--clr-signal) 70%, #0a7d76));
+  color: var(--clr-signal-ink);
+  flex: 0 0 auto;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+
+.btn-outline {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border-strong);
+  color: var(--ink-1);
+  flex: 1;
+  backdrop-filter: blur(10px);
+}
+.btn-outline:hover { background: var(--glass-fill-strong); }
+
+.btn-square {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  flex: 0 0 auto;
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border-strong);
+  color: var(--ink-1);
+}
+.btn-square:hover { background: var(--glass-fill-strong); }
+
+.btn-copied { background: color-mix(in srgb, var(--clr-ok) 22%, var(--glass-fill)) !important; border-color: color-mix(in srgb, var(--clr-ok) 45%, transparent) !important; }
+
+/* ---------------- Server list ---------------- */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.search-box svg { width: 16px; height: 16px; color: var(--ink-2); flex-shrink: 0; }
+.search-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--ink-1);
+  font-size: 13.5px;
+  font-family: inherit;
+  min-width: 0;
+}
+.search-box input::placeholder { color: var(--ink-3); }
+
+.server-list { display: flex; flex-direction: column; gap: 8px; }
+
+.server-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  border: 1px solid transparent;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.server-row:hover { background: var(--glass-fill-strong); border-color: var(--glass-border); }
+
+.server-flag { font-size: 20px; flex-shrink: 0; width: 24px; text-align: center; }
+.server-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--clr-ok); flex-shrink: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--clr-ok) 20%, transparent);
+}
+.server-info { flex: 1; min-width: 0; }
+.server-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.server-sub { font-size: 11.5px; color: var(--ink-2); margin-top: 1px; }
+
+.proto-chip {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--clr-signal) 18%, transparent);
+  color: var(--clr-signal);
+  border: 1px solid color-mix(in srgb, var(--clr-signal) 32%, transparent);
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.icon-btn-sm {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.icon-btn-sm:hover { background: var(--glass-fill-strong); color: var(--ink-1); }
+.icon-btn-sm svg { width: 15px; height: 15px; }
+
+.server-details {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  padding: 8px 12px 2px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  direction: ltr;
+  text-align: left;
+}
+.server-details b { color: var(--ink-1); font-weight: 600; }
+
+.empty-note {
+  text-align: center;
+  color: var(--ink-2);
+  font-size: 13px;
+  padding: 24px 10px;
+}
+
+/* ---------------- Quick add apps ---------------- */
+.quickadd-inline { margin-top: 2px; }
+.quickadd-title { font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; font-weight: 600; }
+.app-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.app-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--input-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--ink-1);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  text-decoration: none;
+}
+.app-chip:hover { background: var(--glass-fill-strong); border-color: var(--glass-border-strong); }
+.app-chip:active { transform: scale(0.96); }
+.app-chip .app-icon { font-size: 15px; line-height: 1; }
+.app-chip.is-more { background: transparent; border-style: dashed; color: var(--ink-2); }
+
+/* ---------------- Footer / support row ---------------- */
+.support-row { display: flex; gap: 8px; margin-top: 4px; }
+.support-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--ink-1);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease);
+}
+.support-btn:hover { background: var(--glass-fill-strong); }
+.support-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.footnote {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-3);
+  padding: 18px 10px 6px;
+}
+.footnote-line {
+  margin-bottom: 6px;
+}
+.footnote-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  text-decoration: none;
+  font-weight: 700;
+  transition: color var(--dur-fast) var(--ease);
+}
+.footnote-credit:hover { color: var(--ink-1); }
+.footnote-gh-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ---------------- Modal ---------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-med) var(--ease);
+}
+.modal-overlay.is-open { opacity: 1; pointer-events: auto; }
+
+.modal {
+  background: var(--bg-1);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+  transform: scale(0.92) translateY(10px);
+  transition: transform var(--dur-med) var(--ease);
+}
+.modal-overlay.is-open .modal { transform: scale(1) translateY(0); }
+
+.modal-title { font-weight: 700; font-size: 14.5px; margin-bottom: 14px; }
+.qr-box {
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  margin-bottom: 14px;
+}
+.qr-box img, .qr-box canvas { width: 100%; height: auto; display: block; }
+.qr-fallback-note { font-size: 12px; color: var(--ink-2); padding: 10px; }
+.modal-close {
+  width: 100%;
+  padding: 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border-strong);
+  background: var(--glass-fill);
+  color: var(--ink-1);
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+/* ---------------- Toast ---------------- */
+.toast {
+  position: fixed;
+  bottom: 92px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--bg-1);
+  border: 1px solid var(--glass-border-strong);
+  color: var(--ink-1);
+  padding: 11px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.toast.is-open { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast svg { width: 15px; height: 15px; color: var(--clr-ok); }
+
+/* ---------------- Loading / error states ---------------- */
+.skeleton {
+  background: linear-gradient(100deg, var(--track) 30%, var(--glass-fill-strong) 50%, var(--track) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+.state-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--clr-danger) 12%, var(--glass-fill));
+  border: 1px solid color-mix(in srgb, var(--clr-danger) 26%, var(--glass-border));
+  font-size: 12.5px;
+  margin-bottom: 14px;
+}
+.state-banner svg { width: 18px; height: 18px; color: var(--clr-danger); flex-shrink: 0; }
+
+.hidden { display: none !important; }
+
+/* ---------------- Sticky bottom quick-add (mobile app-like) ---------------- */
+.sticky-quickadd {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: color-mix(in srgb, var(--bg-1) 92%, transparent);
+  border-top: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+}
+.sticky-quickadd .app-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }
+.sticky-quickadd .app-row::-webkit-scrollbar { display: none; }
+.sticky-quickadd .quickadd-title { display: none; }
+.sticky-quickadd .app-chip { flex-shrink: 0; }
+
+@media (min-width: 640px) {
+  .sticky-quickadd { display: none; } /* on wider screens the inline card in the flow is enough */
+}
+@media (max-width: 639px) {
+  .quickadd-inline { display: none; } /* avoid duplicating on mobile, sticky bar takes over */
+}
+
+/* ---------------- Animations ---------------- */
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slide-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes pulse-glow { 0%, 100% { opacity: 0.28; } 50% { opacity: 0.55; } }
+
+/* ---------------- Small screens polish ---------------- */
+@media (max-width: 360px) {
+  .ring-wrap { width: 128px; }
+  .ring-svg-box { width: 108px; height: 108px; }
+  .ring-value { font-size: 18px; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark">🛡️</div>
+      <div class="brand-name" id="brandName">PasarGuard</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="langToggle" type="button" aria-label="Language">
+        <span id="langLabel" style="font-size:12.5px; font-weight:800;"></span>
+      </button>
+      <button class="icon-btn" id="themeToggle" type="button" aria-label="Theme">
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg id="themeIconSun" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="footnote hidden" id="previewNote" style="margin:-6px 0 14px; padding:8px 12px; background:var(--input-bg); border-radius:var(--radius-sm); font-size:11.5px;"></div>
+
+  <div class="state-banner hidden" id="errorBanner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <div>
+      <div class="state-title" style="font-weight:700; margin-bottom:2px;"></div>
+      <div class="state-body" style="color:var(--ink-2);"></div>
+    </div>
+  </div>
+
+  <div class="announce hidden" id="announceBox">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;flex-shrink:0;color:var(--clr-amber);"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    <div class="announce-text"></div>
+  </div>
+
+  <!-- ===================== Status card ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <span class="card-title" id="cardStatusLabel">وضعیت اشتراک</span>
+      <span class="badge is-unknown" id="statusBadge">…</span>
+    </div>
+
+    <div class="rings-row" id="ringsRow"><!-- injected by ringMarkup() --></div>
+
+    <div class="meta-row">
+      <div class="meta-item">
+        <div class="meta-label" id="metaExpiryLabel"></div>
+        <div class="meta-value" id="metaExpiryValue">–</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label" id="metaPlanLabel"></div>
+        <div class="meta-value" id="metaPlanValue">–</div>
+      </div>
+    </div>
+
+    <div class="actions-row">
+      <button class="btn btn-primary" id="renewBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        <span></span>
+      </button>
+      <button class="btn btn-square" id="qrLinkBtn" type="button" aria-label="QR">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 21h1M21 21v-3M17.5 17.5h.01M21 14h.01"/></svg>
+      </button>
+      <button class="btn btn-outline" id="copyLinkBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ===================== Servers card ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <span class="card-title" id="serversTitle">سرورهای موجود</span>
+    </div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="serverSearch" autocomplete="off" />
+    </div>
+    <div class="server-list" id="serverList">
+      <div class="empty-note">…</div>
+    </div>
+  </section>
+
+  <!-- ===================== Quick add (inline, tablet/desktop) ===================== -->
+  <section class="card quickadd-inline">
+    <div class="quickadd-title"></div>
+    <div class="app-row"></div>
+  </section>
+
+  <div class="support-row hidden" id="supportRow"></div>
+
+  <div class="footnote" id="footnote">
+    <div class="footnote-line" id="footnoteSecurity"></div>
+    <a class="footnote-credit" id="footnoteCredit" href="#" target="_blank" rel="noopener">
+      <svg class="footnote-gh-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span id="footnoteCreditText"></span>
+    </a>
+  </div>
+</div>
+
+<!-- ===================== Sticky bottom quick add (mobile) ===================== -->
+<div class="sticky-quickadd">
+  <div class="quickadd-title"></div>
+  <div class="app-row"></div>
+</div>
+
+<!-- ===================== QR modal ===================== -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal">
+    <div class="modal-title" id="qrModalTitle">QR</div>
+    <div class="qr-box" id="qrBox"></div>
+    <button class="modal-close" id="qrModalClose" type="button"></button>
+  </div>
+</div>
+
+<!-- ===================== Toast ===================== -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  <span></span>
+</div>
+
+<script>
+/* ==========================================================================
+   PasarGuard Subscription Dashboard
+   Single-file, no-build subscription page for PasarGuard.
+
+   HOW DATA GETS IN (read this before editing anything below CONFIG):
+   1) If PasarGuard's custom-template mechanism injects data into
+      `window.__INITIAL_DATA__` before this script runs, it is used to
+      enrich display (title/support link/etc.) — read defensively, never
+      required.
+   2) Regardless of #1, this page always tries a same-origin re-fetch of
+      its own URL with a non-HTML `Accept` header. Per PasarGuard's own
+      docs, the panel decides HTML-vs-raw based on `Accept`, so this is a
+      same-origin request (no CORS) that returns the exact same headers
+      and body every VPN client already relies on
+      (Subscription-Userinfo, Profile-Title, Support-URL, the base64
+      config list). This is the authoritative source for usage/expiry/
+      configs, and it keeps working even if PasarGuard changes the
+      internal shape of #1 in a future version.
+   3) If both fail (opened as a local file, or the fetch is blocked),
+      sample data is shown so you can preview the design.
+   ========================================================================== */
+
+/* ============================== 1) CONFIG ===============================
+   Edit freely — this is the only section you should need to touch.       */
+const CONFIG = {
+  brand: {
+    name: 'نام برند شما',       // shown in the header
+    logoEmoji: '🛡️',            // used when logoUrl is empty
+    logoUrl: '',                // optional: https://... or data:image/... URI
+    credit: 'TryToConect 2026', // shown at the very bottom of the page
+    creditUrl: 'https://github.com/TryToConect/Pasargad-Template',               // TODO: put your GitHub repo / project URL here — clicking the credit line opens this
+  },
+
+  // Telegram links (without @), or a full https:// URL if you use something else.
+  links: {
+    renew: '',                  // your sales/renewal bot — powers the "renew" button
+    support: '',                // support account/bot
+    channel: '',                // announcement channel
+  },
+
+  announcement: {
+    enabled: false,
+    text: { fa: '', en: '' },
+    url: '',
+  },
+
+  theme: { default: 'dark' },   // 'dark' | 'light'
+  language: { default: 'fa' },  // 'fa' | 'en'
+
+  // Thresholds for the amber "running low" warning color.
+  behavior: {
+    warnDaysLeft: 3,
+    warnUsagePercent: 85,
+    fetchTimeoutMs: 9000,
+    ringReferenceDays: 30, // reference window the time-ring fill is drawn against (most plans are monthly)
+  },
+
+  // "Quick add" one-tap import buttons. `{url}` is replaced with the
+  // percent-encoded subscription link. Import URL schemes are controlled
+  // by each app's developer and do change between versions — if a button
+  // stops working, it's almost always this list that needs a refresh, not
+  // the rest of the page.
+  apps: [
+    { id: 'v2rayng', name: 'v2rayNG', icon: '🤖', platforms: ['android'],
+      importUrl: 'v2rayng://install-config?url={url}' },
+    { id: 'hiddify', name: 'Hiddify', icon: '🧩', platforms: ['android', 'ios', 'windows', 'macos', 'linux'],
+      importUrl: 'hiddify://import-remote-profile?url={url}' },
+    { id: 'singbox', name: 'sing-box', icon: '📦', platforms: ['ios', 'android', 'windows', 'macos', 'linux'],
+      importUrl: 'sing-box://import-remote-profile?url={url}' },
+    { id: 'streisand', name: 'Streisand', icon: '🌀', platforms: ['ios'],
+      importUrl: 'streisand://import/{url}' },
+    { id: 'clash', name: 'Clash Verge', icon: '🐱', platforms: ['windows', 'macos', 'linux'],
+      importUrl: 'clash://install-config?url={url}' },
+    { id: 'shadowrocket', name: 'Shadowrocket', icon: '🚀', platforms: ['ios'],
+      // Shadowrocket wants the sub URL base64-encoded inside its own scheme,
+      // so it gets a builder function instead of a plain {url} template.
+      buildUrl: function (subUrl) { return 'shadowrocket://add/sub://' + b64EncodeUtf8(subUrl) + '?remark=' + encodeURIComponent(CONFIG.brand.name || 'Sub'); } },
+    { id: 'nekobox', name: 'NekoBox', icon: '🐾', platforms: ['android'],
+      importUrl: 'nekobox://install-config?name=Sub&type=SUBSCRIPTION&url={url}' },
+  ],
+};
+/* =========================== END OF CONFIG =============================== */
+
+
+/* ============================ 2) i18n strings ============================ */
+const I18N = {
+  fa: {
+    subStatus: 'وضعیت اشتراک', active: 'فعال', limited: 'اتمام حجم', expired: 'منقضی شده',
+    onHold: 'در انتظار فعال‌سازی', unknown: 'نامشخص', checking: 'در حال بررسی…',
+    dataUsage: 'حجم مصرفی', timeLeft: 'اعتبار زمانی', remaining: 'باقی‌مانده',
+    unlimited: 'نامحدود', noExpiry: 'بدون انقضا', daysUnit: 'روز', usedOf: 'از',
+    expiryDate: 'تاریخ انقضا', plan: 'پلن', renew: 'تمدید', copyLink: 'کپی لینک اشتراک',
+    copied: 'کپی شد!', scanQr: 'نمایش QR', availableServers: 'سرورهای موجود',
+    searchPlaceholder: 'جستجوی سرور یا کشور…', noResults: 'موردی پیدا نشد',
+    details: 'جزئیات فنی', quickAdd: 'افزودن سریع به:', moreApps: 'بقیه',
+    support: 'پشتیبانی', channel: 'کانال تلگرام', buyRenew: 'خرید / تمدید',
+    close: 'بستن', copyConfig: 'کپی کانفیگ', addToApp: 'افزودن به اپ',
+    loadErrorTitle: 'دریافت اطلاعات ممکن نشد', loadErrorBody: 'نمایش داده‌ی نمونه — لینک اشتراک را بررسی کنید.',
+    address: 'آدرس', port: 'پورت', network: 'شبکه', security: 'امنیت', sni: 'SNI',
+    days: (n) => (n === 1 ? '۱ روز' : toFa(n) + ' روز'),
+    previewNote: 'حالت پیش‌نمایش — با داده‌ی نمونه',
+    encryptedNote: 'اتصال شما رمزنگاری شده است',
+  },
+  en: {
+    subStatus: 'Subscription', active: 'Active', limited: 'Data limit reached', expired: 'Expired',
+    onHold: 'On hold', unknown: 'Unknown', checking: 'Checking…',
+    dataUsage: 'Data usage', timeLeft: 'Time left', remaining: 'remaining',
+    unlimited: 'Unlimited', noExpiry: 'No expiry', daysUnit: 'days', usedOf: 'of',
+    expiryDate: 'Expiry date', plan: 'Plan', renew: 'Renew', copyLink: 'Copy subscription link',
+    copied: 'Copied!', scanQr: 'Show QR', availableServers: 'Available servers',
+    searchPlaceholder: 'Search server or country…', noResults: 'No results',
+    details: 'Technical details', quickAdd: 'Quick add to:', moreApps: 'More',
+    support: 'Support', channel: 'Telegram channel', buyRenew: 'Buy / Renew',
+    close: 'Close', copyConfig: 'Copy config', addToApp: 'Add to app',
+    loadErrorTitle: 'Could not load your data', loadErrorBody: 'Showing sample data — check the subscription link.',
+    address: 'Address', port: 'Port', network: 'Network', security: 'Security', sni: 'SNI',
+    days: (n) => n + (n === 1 ? ' day' : ' days'),
+    previewNote: 'Preview mode — sample data',
+    encryptedNote: 'Your connection is encrypted',
+  },
+};
+let lang = CONFIG.language.default === 'en' ? 'en' : 'fa';
+function t(key) { return (I18N[lang] && I18N[lang][key]) || I18N.fa[key] || key; }
+
+const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+function toFa(n) { return String(n).replace(/[0-9]/g, (d) => FA_DIGITS[d]); }
+function localizeDigits(n) { return lang === 'fa' ? toFa(n) : String(n); }
+
+
+/* ======================= 3) Jalaali calendar (tested) ===================== */
+(function (global) {
+  function div(a, b) { return ~~(a / b); }
+  function mod(a, b) { return a - ~~(a / b) * b; }
+  var breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+  function jalCal(jy) {
+    var bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump, leap, leapG, march, n, i;
+    if (jy < jp || jy >= breaks[bl - 1]) return { leap: 0, gy: gy, march: 20 };
+    for (i = 1; i < bl; i += 1) {
+      jm = breaks[i]; jump = jm - jp;
+      if (jy < jm) break;
+      leapJ = leapJ + div(jump, 33) * 8 + div(mod(jump, 33), 4);
+      jp = jm;
+    }
+    n = jy - jp;
+    leapJ = leapJ + div(n, 33) * 8 + div(mod(n, 33) + 3, 4);
+    if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+    leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150;
+    march = 20 + leapJ - leapG;
+    if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33;
+    leap = mod(mod(n + 1, 33) - 1, 4);
+    if (leap === -1) leap = 4;
+    return { leap: leap, gy: gy, march: march };
+  }
+  function g2d(gy, gm, gd) {
+    var d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408;
+    d = d - div(div(gy + div(gm - 8, 6) + 100100, 100) * 3, 4) + 752;
+    return d;
+  }
+  function d2j(jdn) {
+    var gy = (function (j) {
+      var jj = 4 * j + 139361631;
+      jj = jj + div(div(4 * j + 183187720, 146097) * 3, 4) * 4 - 3908;
+      var i = div(mod(jj, 1461), 4) * 5 + 308;
+      return div(jj, 1461) - 100100 + div(8 - (mod(div(i, 153), 12) + 1), 6);
+    })(jdn);
+    var jy = gy - 621, r = jalCal(jy), jdn1f = g2d(r.gy, 3, r.march), k = jdn - jdn1f, jd, jm;
+    if (k >= 0) {
+      if (k <= 185) { jm = 1 + div(k, 31); jd = mod(k, 31) + 1; return { jy: jy, jm: jm, jd: jd }; }
+      k -= 186;
+    } else { jy -= 1; k += 179; if (r.leap === 1) k += 1; }
+    jm = 7 + div(k, 30); jd = mod(k, 30) + 1;
+    return { jy: jy, jm: jm, jd: jd };
+  }
+  function toJalaali(gy, gm, gd) { return d2j(g2d(gy, gm, gd)); }
+  global.toJalaali = toJalaali;
+})(window);
+
+const FA_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+function formatDate(unixSeconds) {
+  const d = new Date(unixSeconds * 1000);
+  if (lang === 'fa') {
+    const j = window.toJalaali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    return `${toFa(j.jd)} ${FA_MONTHS[j.jm - 1]} ${toFa(j.jy)}`;
+  }
+  return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+
+/* ============================= 4) Utilities =============================== */
+function b64EncodeUtf8(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64DecodeUtf8(str) {
+  const cleaned = str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
+  const padded = cleaned + '=='.slice(0, (4 - (cleaned.length % 4)) % 4);
+  return decodeURIComponent(escape(atob(padded)));
+}
+function looksLikeBase64(s) {
+  return /^[A-Za-z0-9+/_-]+={0,2}$/.test(s.replace(/\s/g, '')) && s.length > 20;
+}
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) return lang === 'fa' ? '۰ گیگ' : '0 GB';
+  const units = lang === 'fa'
+    ? ['بایت', 'کیلوبایت', 'مگابایت', 'گیگ', 'ترابایت']
+    : ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const val = bytes / Math.pow(1024, i);
+  const rounded = val >= 100 ? Math.round(val) : Math.round(val * 10) / 10;
+  return `${localizeDigits(rounded)} ${units[i]}`;
+}
+function daysBetween(nowSec, futureSec) {
+  return Math.ceil((futureSec - nowSec) / 86400);
+}
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      return true;
+    } catch (e2) { return false; }
+  }
+}
+
+/* Small heuristic: prefix a flag emoji onto a remark if it names a known
+   country and doesn't already start with one. Pure string matching, no
+   network calls — safe to skip if it doesn't match anything. */
+const COUNTRY_FLAGS = {
+  'germany': '🇩🇪', 'آلمان': '🇩🇪', 'de': '🇩🇪',
+  'netherlands': '🇳🇱', 'holland': '🇳🇱', 'هلند': '🇳🇱', 'nl': '🇳🇱',
+  'france': '🇫🇷', 'فرانسه': '🇫🇷', 'fr': '🇫🇷',
+  'finland': '🇫🇮', 'فنلاند': '🇫🇮', 'fi': '🇫🇮',
+  'turkey': '🇹🇷', 'ترکیه': '🇹🇷', 'tr': '🇹🇷',
+  'united kingdom': '🇬🇧', 'britain': '🇬🇧', 'انگلیس': '🇬🇧', 'uk': '🇬🇧', 'gb': '🇬🇧',
+  'united states': '🇺🇸', 'america': '🇺🇸', 'آمریکا': '🇺🇸', 'usa': '🇺🇸', 'us': '🇺🇸',
+  'canada': '🇨🇦', 'کانادا': '🇨🇦', 'ca': '🇨🇦',
+  'uae': '🇦🇪', 'dubai': '🇦🇪', 'امارات': '🇦🇪', 'ae': '🇦🇪',
+  'russia': '🇷🇺', 'روسیه': '🇷🇺', 'ru': '🇷🇺',
+  'singapore': '🇸🇬', 'سنگاپور': '🇸🇬', 'sg': '🇸🇬',
+  'japan': '🇯🇵', 'ژاپن': '🇯🇵', 'jp': '🇯🇵',
+  'south korea': '🇰🇷', 'کره جنوبی': '🇰🇷', 'kr': '🇰🇷',
+  'poland': '🇵🇱', 'لهستان': '🇵🇱', 'pl': '🇵🇱',
+  'austria': '🇦🇹', 'اتریش': '🇦🇹', 'at': '🇦🇹',
+  'switzerland': '🇨🇭', 'سوئیس': '🇨🇭', 'ch': '🇨🇭',
+  'sweden': '🇸🇪', 'سوئد': '🇸🇪', 'se': '🇸🇪',
+  'italy': '🇮🇹', 'ایتالیا': '🇮🇹', 'it': '🇮🇹',
+  'spain': '🇪🇸', 'اسپانیا': '🇪🇸', 'es': '🇪🇸',
+  'ireland': '🇮🇪', 'ایرلند': '🇮🇪', 'ie': '🇮🇪',
+  'romania': '🇷🇴', 'رومانی': '🇷🇴', 'ro': '🇷🇴',
+  'india': '🇮🇳', 'هند': '🇮🇳', 'in': '🇮🇳',
+  'australia': '🇦🇺', 'استرالیا': '🇦🇺', 'au': '🇦🇺',
+  'hong kong': '🇭🇰', 'هنگ‌کنگ': '🇭🇰', 'hk': '🇭🇰',
+  'taiwan': '🇹🇼', 'تایوان': '🇹🇼', 'tw': '🇹🇼',
+  'malaysia': '🇲🇾', 'مالزی': '🇲🇾', 'my': '🇲🇾',
+  'norway': '🇳🇴', 'نروژ': '🇳🇴', 'no': '🇳🇴',
+  'denmark': '🇩🇰', 'دانمارک': '🇩🇰', 'dk': '🇩🇰',
+  'belgium': '🇧🇪', 'بلژیک': '🇧🇪', 'be': '🇧🇪',
+  'greece': '🇬🇷', 'یونان': '🇬🇷', 'gr': '🇬🇷',
+  'ukraine': '🇺🇦', 'اوکراین': '🇺🇦', 'ua': '🇺🇦',
+  'georgia': '🇬🇪', 'گرجستان': '🇬🇪',
+  'armenia': '🇦🇲', 'ارمنستان': '🇦🇲',
+  'brazil': '🇧🇷', 'برزیل': '🇧🇷', 'br': '🇧🇷',
+};
+function guessFlag(remark) {
+  if (!remark) return '🌐';
+  if (/^[\u{1F1E6}-\u{1F1FF}]{2}/u.test(remark)) return remark.match(/^[\u{1F1E6}-\u{1F1FF}]{2}/u)[0];
+  const lower = remark.toLowerCase();
+  for (const key in COUNTRY_FLAGS) {
+    if (key.length <= 2) {
+      if (new RegExp('(^|[^a-zA-Z])' + key + '([^a-zA-Z]|$)', 'i').test(remark)) return COUNTRY_FLAGS[key];
+    } else if (lower.includes(key)) {
+      return COUNTRY_FLAGS[key];
+    }
+  }
+  return '🌐';
+}
+
+
+/* ===================== 5) Proxy URI parsing (per-config) =================== */
+function parseVmess(uriStr) {
+  try {
+    const json = JSON.parse(b64DecodeUtf8(uriStr.slice('vmess://'.length)));
+    return {
+      protocol: 'VMess', remark: json.ps || 'VMess',
+      address: json.add || '', port: json.port || '',
+      params: { network: json.net || '', security: json.tls || 'none', sni: json.sni || json.host || '' },
+      raw: uriStr,
+    };
+  } catch (e) {
+    return { protocol: 'VMess', remark: 'VMess', address: '', port: '', params: {}, raw: uriStr };
+  }
+}
+function parseGenericUri(uriStr) {
+  const knownProtocols = {
+    'vless:': 'VLESS', 'trojan:': 'Trojan', 'ss:': 'Shadowsocks', 'ssr:': 'ShadowsocksR',
+    'hysteria2:': 'Hysteria2', 'hy2:': 'Hysteria2', 'hysteria:': 'Hysteria', 'tuic:': 'TUIC',
+    'wireguard:': 'WireGuard', 'socks:': 'SOCKS5', 'socks5:': 'SOCKS5',
+  };
+  try {
+    const u = new URL(uriStr);
+    const protocol = knownProtocols[u.protocol] || u.protocol.replace(':', '').toUpperCase();
+    let remark = '';
+    try { remark = u.hash ? decodeURIComponent(u.hash.slice(1)) : ''; } catch (e) { remark = u.hash.slice(1); }
+    const params = {};
+    u.searchParams.forEach((v, k) => { params[k] = v; });
+    let address = u.hostname, port = u.port;
+    // Shadowsocks has two link shapes: SIP002 (`base64(method:pass)@host:port`,
+    // host/port already plain) and legacy (`base64(method:pass@host:port)`,
+    // the whole authority is encoded). Detect which by checking for a
+    // literal "@" before any query/fragment — SIP002 always has one.
+    if (protocol === 'Shadowsocks') {
+      const beforeHashQuery = uriStr.slice('ss://'.length).split(/[?#]/)[0];
+      if (!beforeHashQuery.includes('@')) {
+        try {
+          const decoded = b64DecodeUtf8(beforeHashQuery);
+          const m = decoded.match(/^(.*):(.*)@([^:]+):(\d+)$/);
+          if (m) { address = m[3]; port = m[4]; }
+        } catch (e) { /* leave as parsed */ }
+      }
+    }
+    return { protocol, remark: remark || protocol, address, port, params, raw: uriStr };
+  } catch (e) {
+    return { protocol: 'Config', remark: 'Config', address: '', port: '', params: {}, raw: uriStr };
+  }
+}
+function parseProxyUri(line) {
+  if (line.startsWith('vmess://')) return parseVmess(line);
+  return parseGenericUri(line);
+}
+function parseConfigList(bodyText) {
+  let decoded = bodyText.trim();
+  if (looksLikeBase64(decoded)) {
+    try { decoded = b64DecodeUtf8(decoded); } catch (e) { /* wasn't base64, use as-is */ }
+  }
+  return decoded.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && l.includes('://')).map(parseProxyUri);
+}
+
+
+/* ========================= 6) Subscription data flow ======================= */
+const SAMPLE_DATA = {
+  isSample: true,
+  username: 'demo', status: 'active',
+  upload: 3 * 1024 ** 3, download: 19 * 1024 ** 3, total: 50 * 1024 ** 3,
+  expire: Math.floor(Date.now() / 1000) + 7 * 86400,
+  supportUrl: '', subUrl: '#',
+  configs: [
+    { protocol: 'VLESS', remark: 'آلمان - فرانکفورت', address: 'de1.example.com', port: '443', params: { network: 'tcp', security: 'reality', sni: 'example.com' }, raw: '' },
+    { protocol: 'VMess', remark: 'هلند - آمستردام', address: 'nl1.example.com', port: '443', params: { network: 'ws', security: 'tls', sni: 'example.com' }, raw: '' },
+    { protocol: 'Trojan', remark: 'ترکیه - استانبول', address: 'tr1.example.com', port: '443', params: { network: 'tcp', security: 'tls', sni: 'example.com' }, raw: '' },
+  ],
+};
+
+function isPreviewContext() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('sub')) return false; // explicit override: try to actually fetch it
+  return location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+}
+function resolveSubUrl() {
+  const params = new URLSearchParams(location.search);
+  return params.get('sub') || location.href;
+}
+
+function tryReadInjectedData() {
+  try {
+    const d = window.__INITIAL_DATA__;
+    if (!d || typeof d !== 'object' || d.__isTemplateSample) return null;
+    return d;
+  } catch (e) { return null; }
+}
+
+async function fetchRawSubscription(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CONFIG.behavior.fetchTimeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: 'text/plain, application/json;q=0.9, */*;q=0.8' },
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    if (contentType.includes('text/html')) {
+      // The panel (or whatever is actually serving this URL) ignored our
+      // Accept header and gave back HTML instead of raw subscription data
+      // — parsing that as a config list would just produce garbage rows.
+      // Treat it the same as any other failure to get raw data.
+      throw new Error('got HTML instead of raw subscription data');
+    }
+    const userinfoRaw = res.headers.get('subscription-userinfo');
+    const userinfo = {};
+    if (userinfoRaw) {
+      userinfoRaw.split(';').forEach((part) => {
+        const [k, v] = part.trim().split('=');
+        if (k && v !== undefined) userinfo[k.trim()] = Number(v.trim());
+      });
+    }
+    let profileTitle = res.headers.get('profile-title') || '';
+    try { profileTitle = decodeURIComponent(profileTitle); } catch (e) { /* leave as-is */ }
+    const bodyText = await res.text();
+    const configs = parseConfigList(bodyText);
+    return {
+      upload: userinfo.upload || 0, download: userinfo.download || 0,
+      total: userinfo.total || 0, expire: userinfo.expire || 0,
+      profileTitle, supportUrl: res.headers.get('support-url') || '',
+      webPageUrl: res.headers.get('profile-web-page-url') || '',
+      configs, hadUserinfo: !!userinfoRaw,
+    };
+  } catch (e) {
+    clearTimeout(timeout);
+    throw e;
+  }
+}
+
+function deriveStatus(upload, download, total, expire) {
+  const now = Math.floor(Date.now() / 1000);
+  if (expire && expire > 0 && expire < now) return 'expired';
+  if (total && total > 0 && upload + download >= total) return 'limited';
+  return 'active';
+}
+
+async function loadSubscriptionData() {
+  const subUrl = resolveSubUrl();
+  const injected = tryReadInjectedData();
+
+  if (isPreviewContext()) {
+    return Object.assign({}, SAMPLE_DATA, injected || {}, { subUrl, isSample: true });
+  }
+
+  try {
+    const raw = await fetchRawSubscription(subUrl);
+    if (!raw.hadUserinfo && raw.configs.length === 0) throw new Error('empty response');
+    const status = deriveStatus(raw.upload, raw.download, raw.total, raw.expire);
+    return {
+      isSample: false,
+      username: (injected && injected.username) || '',
+      status,
+      upload: raw.upload, download: raw.download, total: raw.total, expire: raw.expire,
+      supportUrl: raw.supportUrl || (injected && injected.supportUrl) || '',
+      subUrl, configs: raw.configs,
+    };
+  } catch (e) {
+    console.warn('[sub-template] could not fetch live subscription data, showing sample data:', e);
+    return Object.assign({}, SAMPLE_DATA, { subUrl, isSample: true, loadFailed: true });
+  }
+}
+
+
+/* ============================== 7) Rendering =============================== */
+let currentData = null;
+let searchQuery = '';
+
+function el(sel, root) { return (root || document).querySelector(sel); }
+function els(sel, root) { return Array.from((root || document).querySelectorAll(sel)); }
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const isDark = theme === 'dark';
+  el('#themeIconMoon').classList.toggle('hidden', !isDark);
+  el('#themeIconSun').classList.toggle('hidden', isDark);
+}
+function applyLanguage(newLang) {
+  lang = newLang;
+  document.documentElement.lang = lang === 'fa' ? 'fa' : 'en';
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  el('#langLabel').textContent = lang === 'fa' ? 'EN' : 'فا';
+  if (currentData) renderAll(currentData);
+}
+
+function renderStatusBadge(status) {
+  const map = {
+    active: ['is-active', t('active')], limited: ['is-limited', t('limited')],
+    expired: ['is-expired', t('expired')], on_hold: ['is-hold', t('onHold')],
+  };
+  const [cls, label] = map[status] || ['is-unknown', t('unknown')];
+  const badge = el('#statusBadge');
+  badge.className = 'badge ' + cls;
+  badge.textContent = label;
+}
+
+function ringMarkup(id, colorVar, severity) {
+  const r = 54, c = 2 * Math.PI * r;
+  return `
+    <div class="ring-wrap" data-severity="${severity}">
+      <div class="ring-svg-box">
+        <svg viewBox="0 0 128 128">
+          <circle class="ring-glow" id="${id}Glow" cx="64" cy="64" r="${r}" style="stroke:${colorVar}" stroke-dasharray="${c}" stroke-dashoffset="${c}"></circle>
+          <circle class="ring-track" cx="64" cy="64" r="${r}"></circle>
+          <circle class="ring-progress" id="${id}Progress" cx="64" cy="64" r="${r}" style="stroke:${colorVar}" stroke-dasharray="${c}" stroke-dashoffset="${c}"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-value" id="${id}Value">–</div>
+          <div class="ring-unit" id="${id}Unit"></div>
+        </div>
+      </div>
+      <div class="ring-caption" id="${id}Caption"></div>
+    </div>`;
+}
+
+function setRing(id, fraction, severity) {
+  const r = 54, c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(1, fraction));
+  const offset = c * (1 - clamped);
+  requestAnimationFrame(() => {
+    el('#' + id + 'Progress').style.strokeDashoffset = offset;
+    el('#' + id + 'Glow').style.strokeDashoffset = offset;
+  });
+  el('#' + id + 'Progress').parentElement.parentElement.parentElement.dataset.severity = severity;
+}
+
+function ensureRingShells() {
+  const row = el('#ringsRow');
+  if (row && !row.dataset.built) {
+    row.innerHTML = ringMarkup('dataRing', 'var(--clr-signal)', 'ok') + ringMarkup('timeRing', 'var(--clr-amber)', 'ok');
+    row.dataset.built = '1';
+  }
+}
+
+function renderRings(data) {
+  ensureRingShells();
+  const now = Math.floor(Date.now() / 1000);
+  const used = (data.upload || 0) + (data.download || 0);
+  const total = data.total || 0;
+
+  // Data ring
+  if (total > 0) {
+    const frac = Math.min(used / total, 1);
+    const sev = frac >= 1 ? 'danger' : (frac >= CONFIG.behavior.warnUsagePercent / 100 ? 'warn' : 'ok');
+    setRing('dataRing', frac, sev);
+    const remain = Math.max(total - used, 0);
+    el('#dataRingValue').textContent = formatBytes(remain).split(' ')[0];
+    el('#dataRingUnit').textContent = formatBytes(remain).split(' ').slice(1).join(' ');
+  } else {
+    setRing('dataRing', 0.06, 'ok');
+    el('#dataRingValue').textContent = '∞';
+    el('#dataRingUnit').textContent = t('unlimited');
+  }
+  el('#dataRingCaption').textContent = t('dataUsage');
+
+  // Time ring. We only ever get an absolute expiry timestamp back from the
+  // panel, never "how many days was this plan for" — so the fill fraction
+  // is deliberately just an urgency cue against a fixed reference window
+  // (most resold plans are monthly), not a precise "% of plan consumed".
+  if (data.expire && data.expire > 0) {
+    const daysLeft = Math.max(daysBetween(now, data.expire), 0);
+    const frac = 1 - Math.min(daysLeft / CONFIG.behavior.ringReferenceDays, 1);
+    const sev = daysLeft <= 0 ? 'danger' : (daysLeft <= CONFIG.behavior.warnDaysLeft ? 'warn' : 'ok');
+    setRing('timeRing', frac, sev);
+    el('#timeRingValue').textContent = localizeDigits(daysLeft);
+    el('#timeRingUnit').textContent = t('daysUnit') + ' ' + t('remaining');
+  } else {
+    setRing('timeRing', 0.06, 'ok');
+    el('#timeRingValue').textContent = '∞';
+    el('#timeRingUnit').textContent = t('noExpiry');
+  }
+  el('#timeRingCaption').textContent = t('timeLeft');
+}
+
+function renderMeta(data) {
+  el('#metaExpiryLabel').textContent = t('expiryDate');
+  el('#metaExpiryValue').textContent = data.expire ? formatDate(data.expire) : t('noExpiry');
+  el('#metaPlanLabel').textContent = t('plan');
+  el('#metaPlanValue').textContent = data.total ? formatBytes(data.total) : t('unlimited');
+}
+
+function renderActions(data) {
+  el('#copyLinkBtn').querySelector('span').textContent = t('copyLink');
+  el('#renewBtn').querySelector('span').textContent = t('renew');
+  el('#renewBtn').classList.toggle('hidden', !CONFIG.links.renew);
+}
+
+function serverRowMarkup(cfg, idx) {
+  const flag = guessFlag(cfg.remark);
+  const sub = [cfg.address, cfg.port].filter(Boolean).join(':');
+  return `
+    <div class="server-row" data-idx="${idx}">
+      <div class="server-flag">${flag}</div>
+      <div class="server-dot"></div>
+      <div class="server-info">
+        <div class="server-name">${escapeHtml(cfg.remark)}</div>
+        <div class="server-sub">${escapeHtml(sub)}</div>
+      </div>
+      <span class="proto-chip">${escapeHtml(cfg.protocol)}</span>
+      <div class="row-actions">
+        <button class="icon-btn-sm js-details" title="${t('details')}" aria-label="${t('details')}">${ICONS.info}</button>
+        <button class="icon-btn-sm js-copy-config" title="${t('copyConfig')}" aria-label="${t('copyConfig')}">${ICONS.copy}</button>
+        <button class="icon-btn-sm js-qr-config" title="${t('scanQr')}" aria-label="${t('scanQr')}">${ICONS.qr}</button>
+      </div>
+    </div>
+    <div class="server-details hidden" id="details-${idx}"></div>`;
+}
+function detailsMarkup(cfg) {
+  const rows = [];
+  if (cfg.address) rows.push([t('address'), cfg.address]);
+  if (cfg.port) rows.push([t('port'), cfg.port]);
+  if (cfg.params) {
+    if (cfg.params.network) rows.push([t('network'), cfg.params.network]);
+    if (cfg.params.security) rows.push([t('security'), cfg.params.security]);
+    if (cfg.params.sni) rows.push([t('sni'), cfg.params.sni]);
+  }
+  return rows.map(([k, v]) => `<div>${escapeHtml(k)}</div><div><b>${escapeHtml(String(v))}</b></div>`).join('');
+}
+
+function renderServerList(data) {
+  el('#serversTitle').textContent = t('availableServers');
+  el('#serverSearch').placeholder = t('searchPlaceholder');
+  const q = searchQuery.trim().toLowerCase();
+  const filtered = data.configs
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => !q || c.remark.toLowerCase().includes(q) || c.protocol.toLowerCase().includes(q) || (c.address || '').toLowerCase().includes(q));
+
+  const list = el('#serverList');
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-note">${t('noResults')}</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(({ c, i }) => serverRowMarkup(c, i)).join('');
+}
+
+function detectPlatform() {
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  if (/iPhone|iPad|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  if (/Macintosh|Mac OS X/.test(ua)) return 'macos';
+  if (/Win/.test(platform)) return 'windows';
+  if (/Linux/.test(platform)) return 'linux';
+  return 'other';
+}
+
+let showAllApps = false;
+function renderQuickAdd(data) {
+  const platform = detectPlatform();
+  const sorted = CONFIG.apps.slice().sort((a, b) => {
+    const aMatch = a.platforms.includes(platform) ? 0 : 1;
+    const bMatch = b.platforms.includes(platform) ? 0 : 1;
+    return aMatch - bMatch;
+  });
+  const visible = showAllApps ? sorted : sorted.slice(0, 3);
+  const chipHtml = (app) => {
+    const href = app.buildUrl ? app.buildUrl(data.subUrl) : app.importUrl.replace('{url}', encodeURIComponent(data.subUrl));
+    return `<a class="app-chip" href="${escapeHtml(href)}"><span class="app-icon">${app.icon}</span>${escapeHtml(app.name)}</a>`;
+  };
+  let html = visible.map(chipHtml).join('');
+  if (!showAllApps && sorted.length > 3) {
+    html += `<button class="app-chip is-more js-more-apps" type="button">+${localizeDigits(sorted.length - 3)} ${t('moreApps')}</button>`;
+  }
+  els('.app-row').forEach((row) => { row.innerHTML = html; });
+  els('.quickadd-title').forEach((n) => { n.textContent = t('quickAdd'); });
+}
+
+function renderSupportRow() {
+  const mk = (href, icon, label) => href
+    ? `<a class="support-btn" href="${escapeHtml(href)}" target="_blank" rel="noopener">${icon}${escapeHtml(label)}</a>`
+    : '';
+  const toUrl = (v) => (!v ? '' : /^https?:\/\//.test(v) ? v : 'https://t.me/' + v.replace(/^@/, ''));
+  const parts = [
+    mk(toUrl(CONFIG.links.renew), ICONS.renew, t('buyRenew')),
+    mk(toUrl(CONFIG.links.channel), ICONS.channel, t('channel')),
+    mk(toUrl(CONFIG.links.support), ICONS.support, t('support')),
+  ].filter(Boolean);
+  el('#supportRow').innerHTML = parts.join('');
+  el('#supportRow').classList.toggle('hidden', parts.length === 0);
+}
+
+function renderAnnouncement() {
+  const box = el('#announceBox');
+  const text = CONFIG.announcement.enabled && (CONFIG.announcement.text[lang] || CONFIG.announcement.text.fa);
+  if (!text) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const linkHtml = CONFIG.announcement.url ? ` <a href="${escapeHtml(CONFIG.announcement.url)}" target="_blank" rel="noopener">${lang === 'fa' ? 'بیشتر' : 'more'}</a>` : '';
+  el('#announceBox .announce-text').innerHTML = escapeHtml(text) + linkHtml;
+}
+
+function renderBrand() {
+  const name = CONFIG.brand.name || 'PasarGuard';
+  el('#brandName').textContent = name;
+  const mark = el('#brandMark');
+  if (CONFIG.brand.logoUrl) mark.innerHTML = `<img src="${escapeHtml(CONFIG.brand.logoUrl)}" alt="">`;
+  else mark.textContent = CONFIG.brand.logoEmoji || '🛡️';
+  document.title = name + ' — ' + t('subStatus');
+}
+
+function renderFooter() {
+  el('#footnoteSecurity').textContent = '🔒 ' + t('encryptedNote');
+  el('#footnoteCreditText').textContent = CONFIG.brand.credit || '';
+  el('#footnoteCredit').href = CONFIG.brand.creditUrl || '#';
+}
+
+function renderModalStrings() {
+  el('#qrModalTitle').textContent = t('scanQr');
+  el('#qrModalClose').textContent = t('close');
+}
+
+function renderPreviewNote(data) {
+  const showAsPreview = data.isSample && !data.loadFailed;
+  el('#previewNote').classList.toggle('hidden', !showAsPreview);
+  el('#previewNote').textContent = t('previewNote');
+}
+
+function renderErrorBanner(data) {
+  const banner = el('#errorBanner');
+  if (!data.loadFailed) { banner.classList.add('hidden'); return; }
+  banner.classList.remove('hidden');
+  banner.querySelector('.state-title').textContent = t('loadErrorTitle');
+  banner.querySelector('.state-body').textContent = t('loadErrorBody');
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function renderAll(data) {
+  document.documentElement.lang = lang === 'fa' ? 'fa' : 'en';
+  document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+  el('#cardStatusLabel').textContent = t('subStatus');
+  renderBrand();
+  renderErrorBanner(data);
+  renderAnnouncement();
+  renderStatusBadge(data.status);
+  renderRings(data);
+  renderMeta(data);
+  renderActions(data);
+  renderServerList(data);
+  renderQuickAdd(data);
+  renderSupportRow();
+  renderFooter();
+  renderPreviewNote(data);
+  renderModalStrings();
+}
+
+
+/* ============================== 8) Interactions ============================= */
+const ICONS = {
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
+  qr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M14 21h1M21 21v-3M17.5 17.5h.01M21 14h.01"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+  renew: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>',
+  channel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
+  support: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 100-20 10 10 0 000 20zM12 16v-1a3 3 0 113-3"/><path d="M12 8h.01"/></svg>',
+};
+
+function showToast(msg) {
+  const toast = el('#toast');
+  toast.querySelector('span').textContent = msg;
+  toast.classList.add('is-open');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('is-open'), 1800);
+}
+
+function openQrModal(text) {
+  const modal = el('#qrModal');
+  const box = el('#qrBox');
+  box.innerHTML = '<div class="qr-fallback-note">…</div>';
+  modal.classList.add('is-open');
+  ensureQrLib()
+    .then((QR) => {
+      box.innerHTML = '';
+      try {
+        // eslint-disable-next-line no-new
+        new QR(box, { text, width: 240, height: 240, correctLevel: QR.CorrectLevel.M });
+      } catch (e) {
+        box.innerHTML = `<div class="qr-fallback-note">${escapeHtml(text)}</div>`;
+      }
+    })
+    .catch(() => {
+      box.innerHTML = `<div class="qr-fallback-note">${lang === 'fa' ? 'بارگذاری QR ممکن نشد؛ می‌توانید لینک را کپی کنید.' : 'Could not load the QR library — you can still copy the link.'}</div>`;
+    });
+}
+function closeQrModal() { el('#qrModal').classList.remove('is-open'); }
+
+let qrLibPromise = null;
+function ensureQrLib() {
+  if (window.QRCode) return Promise.resolve(window.QRCode);
+  if (qrLibPromise) return qrLibPromise;
+  qrLibPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.onload = () => (window.QRCode ? resolve(window.QRCode) : reject(new Error('QRCode missing after load')));
+    s.onerror = () => reject(new Error('QR script failed to load'));
+    document.head.appendChild(s);
+  });
+  return qrLibPromise;
+}
+
+function wireEvents(data) {
+  el('#themeToggle').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+  el('#langToggle').addEventListener('click', () => applyLanguage(lang === 'fa' ? 'en' : 'fa'));
+
+  // Delegated (not a direct id lookup) because the quick-add app row is
+  // rendered twice — once inline, once in the sticky mobile bar — and only
+  // one of the two is visible at a given viewport width via CSS. Attaching
+  // to a single element by id would silently miss clicks on whichever copy
+  // CSS is actually showing.
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.js-more-apps')) {
+      showAllApps = true;
+      renderQuickAdd(data);
+    }
+  });
+
+  el('#copyLinkBtn').addEventListener('click', async () => {
+    const ok = await copyToClipboard(data.subUrl);
+    if (ok) { showToast(t('copied')); if (navigator.vibrate) navigator.vibrate(12); }
+  });
+  el('#qrLinkBtn').addEventListener('click', () => openQrModal(data.subUrl));
+  el('#qrModalClose').addEventListener('click', closeQrModal);
+  el('#qrModal').addEventListener('click', (e) => { if (e.target.id === 'qrModal') closeQrModal(); });
+
+  el('#serverSearch').addEventListener('input', (e) => { searchQuery = e.target.value; renderServerList(data); });
+
+  el('#serverList').addEventListener('click', async (e) => {
+    const row = e.target.closest('.server-row');
+    if (!row) return;
+    const idx = Number(row.dataset.idx);
+    const cfg = data.configs[idx];
+    if (e.target.closest('.js-copy-config')) {
+      const ok = await copyToClipboard(cfg.raw || '');
+      if (ok) showToast(t('copied'));
+    } else if (e.target.closest('.js-qr-config')) {
+      openQrModal(cfg.raw || '');
+    } else if (e.target.closest('.js-details')) {
+      const panel = el('#details-' + idx);
+      if (!panel.dataset.filled) { panel.innerHTML = detailsMarkup(cfg); panel.dataset.filled = '1'; }
+      panel.classList.toggle('hidden');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeQrModal(); });
+}
+
+
+/* ================================ 9) Boot =================================== */
+async function boot() {
+  applyTheme(CONFIG.theme.default === 'light' ? 'light' : 'dark');
+  applyLanguage(lang);
+  renderBrand();
+  ensureRingShells(); // show the ring skeleton immediately instead of a blank gap while data loads
+  const data = await loadSubscriptionData();
+  currentData = data;
+  renderAll(data);
+  wireEvents(data);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# backups the install script creates on your server (harmless to keep, but noisy in git)
+*.bak.*
