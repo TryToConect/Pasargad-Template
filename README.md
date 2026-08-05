@@ -2,8 +2,6 @@
 
 یک صفحه‌ی اشتراک شیک، تیره، شیشه‌ای (Glassmorphism) و کاملاً تک‌فایل برای پنل **PasarGuard** — بدون نیاز به Build، بدون نیاز به دیتابیس یا سرور جدا. کافیه یک فایل `index.html` رو توی پنل خودتون جا بدید.
 
-> ساخته‌شده با الهام از [PasarGuard/subscription-template](https://github.com/PasarGuard/subscription-template) (تمپلیت رسمی) و [P4r34m/PasarGuard-Subscription-Template](https://github.com/P4r34m/PasarGuard-Subscription-Template). سپاس از هر دو پروژه.
-
 ---
 
 ## این پروژه چطور کار می‌کند؟
@@ -52,6 +50,30 @@ pasarguard restart
 ```
 
 حالا هر لینک اشتراکی که کاربرهاتون توی مرورگر باز کنن، همین صفحه رو می‌بینن.
+
+## حذف / برگرداندن به حالت قبل
+
+```bash
+sudo bash install.sh --uninstall
+```
+
+این دستور، دقیقاً برعکس نصب رو انجام می‌ده:
+- اگه قبل از نصب این تمپلیت، یک تمپلیت دیگه (یا نسخه‌ی قبلی همین) اونجا بوده، از روی بکاپی که خودِ نصب گرفته بود برش می‌گردونه؛ اگه چیزی قبلش نبوده، فقط فایل رو حذف می‌کنه تا پنل به صفحه‌ی پیش‌فرض خودش برگردد.
+- اگه دو خطی که موقع نصب به `.env` اضافه کرده بود هنوز دقیقاً همون مقدارن (یعنی خودتون دستی عوضش نکرده باشید)، با تأیید شما حذفشون می‌کنه.
+- در آخر با تأیید شما پنل رو ری‌استارت می‌کنه.
+
+هیچ‌کدوم از این‌ها بدون سؤال از شما انجام نمی‌شه. اگه فقط می‌خواید خودتون دستی انجامش بدید:
+```bash
+# فایل تمپلیت رو حذف کنید (یا نسخه‌ی قبلی‌ش که بکاپ گرفته شده بود رو برگردونید،
+# دنبال یک فایل .bak.تاریخ کنار همون index.html بگردید)
+sudo rm /var/lib/pasarguard/templates/subscription/index.html
+
+# و این دو خط رو از .env پنل حذف کنید:
+#   CUSTOM_TEMPLATES_DIRECTORY="..."
+#   SUBSCRIPTION_PAGE_TEMPLATE="subscription/index.html"
+
+sudo pasarguard restart
+```
 
 ## پیش‌نمایش محلی (قبل از نصب)
 
@@ -119,7 +141,7 @@ A single-file, no-build, dark/glass subscription dashboard for the **PasarGuard*
 
 It reads live data through the exact same standard subscription contract every VPN client already relies on (`Subscription-Userinfo` header + base64 config list), fetched same-origin per PasarGuard's own documented `Accept`-header content negotiation — not through an undocumented internal data shape, so it stays working across panel versions.
 
-**Install:** `sudo bash install.sh` (or see the manual steps above — same `.env` keys as the official template: `CUSTOM_TEMPLATES_DIRECTORY`, `SUBSCRIPTION_PAGE_TEMPLATE`).
+**Install:** `sudo bash install.sh` (or see the manual steps above — same `.env` keys as the official template: `CUSTOM_TEMPLATES_DIRECTORY`, `SUBSCRIPTION_PAGE_TEMPLATE`). **Remove:** `sudo bash install.sh --uninstall` — restores whatever was there before, and only touches `.env` lines that match exactly what the installer added.
 **Customize:** edit the `CONFIG` block at the top of `index.html`.
 **Preview locally:** just open `index.html` in a browser — it shows sample data when there's nothing to fetch.
 
