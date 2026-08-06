@@ -770,6 +770,10 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
     <div class="server-list" id="serverList">
       <div class="empty-note">…</div>
     </div>
+    <button class="btn btn-outline" id="copyAllBtn" type="button" style="width:100%; margin-top:12px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      <span></span>
+    </button>
   </section>
 
   <!-- ===================== Quick add (inline, tablet/desktop) ===================== -->
@@ -837,7 +841,7 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
    Edit freely — this is the only section you should need to touch.       */
 const CONFIG = {
   brand: {
-    name: 'نام برند شما',       // shown in the header
+    name: 'نام برند شما',       // fallback shown before data loads, or if the panel doesn't provide a username — the header normally shows each user's own PasarGuard username instead
     logoEmoji: '🛡️',            // used when logoUrl is empty
     logoUrl: '',                // optional: https://... or data:image/... URI
     credit: 'TryToConect 2026', // shown at the very bottom of the page
@@ -908,9 +912,9 @@ const I18N = {
     details: 'جزئیات فنی', quickAdd: 'افزودن سریع به:', moreApps: 'بقیه',
     support: 'پشتیبانی', channel: 'کانال تلگرام', buyRenew: 'خرید / تمدید',
     close: 'بستن', copyConfig: 'کپی کانفیگ', addToApp: 'افزودن به اپ',
+    copyAllConfigs: 'کپی کردن همه‌ی کانفیگ‌ها', copiedAll: (n) => `${toFa(n)} کانفیگ کپی شد!`,
     loadErrorTitle: 'دریافت اطلاعات ممکن نشد', loadErrorBody: 'نمایش داده‌ی نمونه — لینک اشتراک را بررسی کنید.',
     address: 'آدرس', port: 'پورت', network: 'شبکه', security: 'امنیت', sni: 'SNI',
-    days: (n) => (n === 1 ? '۱ روز' : toFa(n) + ' روز'),
     previewNote: 'حالت پیش‌نمایش — با داده‌ی نمونه',
     encryptedNote: 'اتصال شما رمزنگاری شده است',
   },
@@ -925,9 +929,9 @@ const I18N = {
     details: 'Technical details', quickAdd: 'Quick add to:', moreApps: 'More',
     support: 'Support', channel: 'Telegram channel', buyRenew: 'Buy / Renew',
     close: 'Close', copyConfig: 'Copy config', addToApp: 'Add to app',
+    copyAllConfigs: 'Copy all configs', copiedAll: (n) => `Copied ${n} configs!`,
     loadErrorTitle: 'Could not load your data', loadErrorBody: 'Showing sample data — check the subscription link.',
     address: 'Address', port: 'Port', network: 'Network', security: 'Security', sni: 'SNI',
-    days: (n) => n + (n === 1 ? ' day' : ' days'),
     previewNote: 'Preview mode — sample data',
     encryptedNote: 'Your connection is encrypted',
   },
@@ -1189,6 +1193,15 @@ function tryReadInjectedData() {
   } catch (e) { return null; }
 }
 
+function parseUsernameFromDisposition(disposition) {
+  if (!disposition) return '';
+  const m = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  if (!m) return '';
+  let name = m[1];
+  try { name = decodeURIComponent(name); } catch (e) { /* leave as-is */ }
+  return name;
+}
+
 async function fetchRawSubscription(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CONFIG.behavior.fetchTimeoutMs);
@@ -1218,12 +1231,13 @@ async function fetchRawSubscription(url) {
     }
     let profileTitle = res.headers.get('profile-title') || '';
     try { profileTitle = decodeURIComponent(profileTitle); } catch (e) { /* leave as-is */ }
+    const username = parseUsernameFromDisposition(res.headers.get('content-disposition') || '');
     const bodyText = await res.text();
     const configs = parseConfigList(bodyText);
     return {
       upload: userinfo.upload || 0, download: userinfo.download || 0,
       total: userinfo.total || 0, expire: userinfo.expire || 0,
-      profileTitle, supportUrl: res.headers.get('support-url') || '',
+      profileTitle, username, supportUrl: res.headers.get('support-url') || '',
       webPageUrl: res.headers.get('profile-web-page-url') || '',
       configs, hadUserinfo: !!userinfoRaw,
     };
@@ -1254,7 +1268,7 @@ async function loadSubscriptionData() {
     const status = deriveStatus(raw.upload, raw.download, raw.total, raw.expire);
     return {
       isSample: false,
-      username: (injected && injected.username) || '',
+      username: raw.username || (injected && injected.username) || '',
       status,
       upload: raw.upload, download: raw.download, total: raw.total, expire: raw.expire,
       supportUrl: raw.supportUrl || (injected && injected.supportUrl) || '',
@@ -1425,6 +1439,8 @@ function detailsMarkup(cfg) {
 function renderServerList(data) {
   el('#serversTitle').textContent = t('availableServers');
   el('#serverSearch').placeholder = t('searchPlaceholder');
+  el('#copyAllBtn').querySelector('span').textContent = t('copyAllConfigs');
+  el('#copyAllBtn').classList.toggle('hidden', data.configs.length === 0);
   const q = searchQuery.trim().toLowerCase();
   const filtered = data.configs
     .map((c, i) => ({ c, i }))
@@ -1493,8 +1509,11 @@ function renderAnnouncement() {
   el('#announceBox .announce-text').innerHTML = escapeHtml(text) + linkHtml;
 }
 
-function renderBrand() {
-  const name = CONFIG.brand.name || 'PasarGuard';
+function renderBrand(data) {
+  // Per-user name from the panel (e.g. "ali") takes priority over the
+  // generic configured brand name — that only shows before data has
+  // loaded, or as a fallback if the panel didn't provide a username.
+  const name = (data && data.username) || CONFIG.brand.name || 'PasarGuard';
   el('#brandName').textContent = name;
   const mark = el('#brandMark');
   if (CONFIG.brand.logoUrl) mark.innerHTML = `<img src="${escapeHtml(CONFIG.brand.logoUrl)}" alt="">`;
@@ -1535,7 +1554,7 @@ function renderAll(data) {
   document.documentElement.lang = lang === 'fa' ? 'fa' : 'en';
   document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
   el('#cardStatusLabel').textContent = t('subStatus');
-  renderBrand();
+  renderBrand(data);
   renderErrorBanner(data);
   renderAnnouncement();
   renderStatusBadge(data.status);
@@ -1626,6 +1645,11 @@ function wireEvents(data) {
   el('#copyLinkBtn').addEventListener('click', async () => {
     const ok = await copyToClipboard(data.subUrl);
     if (ok) { showToast(t('copied')); if (navigator.vibrate) navigator.vibrate(12); }
+  });
+  el('#copyAllBtn').addEventListener('click', async () => {
+    const all = data.configs.map((c) => c.raw).filter(Boolean).join('\n');
+    const ok = await copyToClipboard(all);
+    if (ok) { showToast(t('copiedAll')(data.configs.length)); if (navigator.vibrate) navigator.vibrate(12); }
   });
   el('#qrLinkBtn').addEventListener('click', () => openQrModal(data.subUrl));
   el('#qrModalClose').addEventListener('click', closeQrModal);

@@ -2,6 +2,8 @@
 
 یک صفحه‌ی اشتراک شیک، تیره، شیشه‌ای (Glassmorphism) و کاملاً تک‌فایل برای پنل **PasarGuard** — بدون نیاز به Build، بدون نیاز به دیتابیس یا سرور جدا. کافیه یک فایل `index.html` رو توی پنل خودتون جا بدید.
 
+> ساخته‌شده با الهام از [PasarGuard/subscription-template](https://github.com/PasarGuard/subscription-template) (تمپلیت رسمی) و [P4r34m/PasarGuard-Subscription-Template](https://github.com/P4r34m/PasarGuard-Subscription-Template). سپاس از هر دو پروژه.
+
 ---
 
 ## این پروژه چطور کار می‌کند؟
@@ -93,7 +95,7 @@ python3 -m http.server 8080
 
 ```js
 const CONFIG = {
-  brand: { name: 'اسم برند شما', logoEmoji: '🛡️', logoUrl: '' },
+  brand: { name: 'اسم برند شما', logoEmoji: '🛡️', logoUrl: '', credit: 'نام/سال', creditUrl: 'https://...' },
   links: { renew: '', support: '', channel: '' }, // یوزرنیم تلگرام یا لینک کامل
   announcement: { enabled: false, text: { fa: '', en: '' }, url: '' },
   theme: { default: 'dark' },
@@ -104,6 +106,14 @@ const CONFIG = {
 ```
 
 رنگ اصلی، شعاع گوشه‌ها و بقیه‌ی توکن‌های ظاهری هم بالای فایل `<style>` با نام‌های `--clr-signal`, `--radius-lg` و غیره قابل تغییرن.
+
+### اسم بالای صفحه
+
+اسمی که بالای صفحه نشون داده می‌شه، به‌صورت خودکار همون یوزرنیمی هست که توی پنل پاسارگارد برای آن اشتراک ثبت شده (مثلاً `ali`) — نه `CONFIG.brand.name`. این اسم رو پنل خودش توی هدر `Content-Disposition` پاسخ می‌ده، پس نیازی به تنظیم اضافه نیست. `CONFIG.brand.name` فقط برای چند لحظه‌ی اول (قبل از رسیدن اطلاعات) و برای حالت پیش‌نمایش/آفلاین به‌کار می‌ره.
+
+### دکمه‌ی «کپی کردن همه‌ی کانفیگ‌ها»
+
+زیر لیست سرورها یک دکمه‌ست که همه‌ی کانفیگ‌های آن اشتراک رو (بدون توجه به فیلتر سرچ) با یک خط فاصله زیرشون یکجا کپی می‌کنه — برای وقتی که می‌خواید همه رو یکجا توی یک اپ paste کنید.
 
 ### چیزهایی که عمداً ساده نگه داشته شدن
 
