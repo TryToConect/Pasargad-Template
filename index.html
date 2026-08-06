@@ -317,6 +317,7 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
   line-height: 1.1;
 }
 .ring-unit { font-size: 11px; color: var(--ink-2); font-weight: 600; margin-top: 1px; }
+.ring-sublabel { font-size: 9.5px; color: var(--ink-3); font-weight: 600; margin-top: 1px; letter-spacing: 0.01em; min-height: 12px; }
 .ring-caption { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
 
 /* ---------------- Meta row (expiry / plan) ---------------- */
@@ -498,6 +499,7 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
   color: var(--ink-1);
   font-size: 12.5px;
   font-weight: 700;
+  font-family: inherit;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
   text-decoration: none;
@@ -505,7 +507,9 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
 .app-chip:hover { background: var(--glass-fill-strong); border-color: var(--glass-border-strong); }
 .app-chip:active { transform: scale(0.96); }
 .app-chip .app-icon { font-size: 15px; line-height: 1; }
-.app-chip.is-more { background: transparent; border-style: dashed; color: var(--ink-2); }
+.app-chip.is-disabled { opacity: 0.4; cursor: not-allowed; }
+.app-chip.is-disabled:hover { background: var(--input-bg); border-color: var(--glass-border); }
+.app-chip.is-disabled:active { transform: none; }
 
 /* ---------------- Footer / support row ---------------- */
 .support-row { display: flex; gap: 8px; margin-top: 4px; }
@@ -872,28 +876,31 @@ const CONFIG = {
     ringReferenceDays: 30, // reference window the time-ring fill is drawn against (most plans are monthly)
   },
 
-  // "Quick add" one-tap import buttons. `{url}` is replaced with the
-  // percent-encoded subscription link. Import URL schemes are controlled
-  // by each app's developer and do change between versions — if a button
-  // stops working, it's almost always this list that needs a refresh, not
-  // the rest of the page.
+  // "Quick add" one-tap import buttons. Two kinds:
+  //   mode: 'deeplink'  — {url}/{name} get substituted and the app opens
+  //                       with the subscription already added. If the app
+  //                       doesn't respond (not installed), a "not
+  //                       installed" message shows instead.
+  //   mode: 'clipboard' — some apps (confirmed: Streisand, V2rayN) don't
+  //                       have a reliable auto-import link at all — for
+  //                       these, the link is copied and the person gets a
+  //                       short instruction instead of a button that opens
+  //                       the app to a broken/blank state.
+  // A button is only ever active on the platform(s) listed — anywhere else
+  // it's shown disabled and does nothing when tapped.
   apps: [
     { id: 'v2rayng', name: 'v2rayNG', icon: '🤖', platforms: ['android'],
-      importUrl: 'v2rayng://install-config?url={url}' },
-    { id: 'hiddify', name: 'Hiddify', icon: '🧩', platforms: ['android', 'ios', 'windows', 'macos', 'linux'],
-      importUrl: 'hiddify://import-remote-profile?url={url}' },
-    { id: 'singbox', name: 'sing-box', icon: '📦', platforms: ['ios', 'android', 'windows', 'macos', 'linux'],
-      importUrl: 'sing-box://import-remote-profile?url={url}' },
-    { id: 'streisand', name: 'Streisand', icon: '🌀', platforms: ['ios'],
-      importUrl: 'streisand://import/{url}' },
-    { id: 'clash', name: 'Clash Verge', icon: '🐱', platforms: ['windows', 'macos', 'linux'],
-      importUrl: 'clash://install-config?url={url}' },
-    { id: 'shadowrocket', name: 'Shadowrocket', icon: '🚀', platforms: ['ios'],
-      // Shadowrocket wants the sub URL base64-encoded inside its own scheme,
-      // so it gets a builder function instead of a plain {url} template.
-      buildUrl: function (subUrl) { return 'shadowrocket://add/sub://' + b64EncodeUtf8(subUrl) + '?remark=' + encodeURIComponent(CONFIG.brand.name || 'Sub'); } },
-    { id: 'nekobox', name: 'NekoBox', icon: '🐾', platforms: ['android'],
-      importUrl: 'nekobox://install-config?name=Sub&type=SUBSCRIPTION&url={url}' },
+      mode: 'deeplink', importUrl: 'v2rayng://install-sub?url={url}' },
+    { id: 'v2rayn', name: 'V2rayN', icon: '🖥️', platforms: ['windows'],
+      mode: 'clipboard' }, // no confirmed URL scheme exists for v2rayN on Windows
+    { id: 'v2box', name: 'V2Box', icon: '📦', platforms: ['android', 'ios'],
+      mode: 'deeplink', importUrl: 'v2box://install-sub?url={url}&name={name}' },
+    { id: 'happ', name: 'Happ', icon: '🌀', platforms: ['android', 'ios'],
+      mode: 'deeplink', importUrl: 'happ://add/{url}' },
+    { id: 'streisand', name: 'Streisand', icon: '🧊', platforms: ['ios'],
+      mode: 'clipboard' }, // Streisand's own deep-link path is unreliable in practice (shows "Invalid config")
+    { id: 'hiddify', name: 'Hiddify', icon: '🧩', platforms: ['android', 'ios'],
+      mode: 'deeplink', importUrl: 'hiddify://install-sub?url={url}#{name}' },
   ],
 };
 /* =========================== END OF CONFIG =============================== */
@@ -909,10 +916,12 @@ const I18N = {
     expiryDate: 'تاریخ انقضا', plan: 'پلن', renew: 'تمدید', copyLink: 'کپی لینک اشتراک',
     copied: 'کپی شد!', scanQr: 'نمایش QR', availableServers: 'سرورهای موجود',
     searchPlaceholder: 'جستجوی سرور یا کشور…', noResults: 'موردی پیدا نشد',
-    details: 'جزئیات فنی', quickAdd: 'افزودن سریع به:', moreApps: 'بقیه',
+    details: 'جزئیات فنی', quickAdd: 'افزودن سریع به:',
     support: 'پشتیبانی', channel: 'کانال تلگرام', buyRenew: 'خرید / تمدید',
     close: 'بستن', copyConfig: 'کپی کانفیگ', addToApp: 'افزودن به اپ',
     copyAllConfigs: 'کپی کردن همه‌ی کانفیگ‌ها', copiedAll: (n) => `${toFa(n)} کانفیگ کپی شد!`,
+    appNotInstalled: (name) => `${name} روی گوشی شما نصب نیست`,
+    clipboardHint: (name) => `لینک کپی شد — ${name} رو باز کن و از «Import from Clipboard» استفاده کن`,
     loadErrorTitle: 'دریافت اطلاعات ممکن نشد', loadErrorBody: 'نمایش داده‌ی نمونه — لینک اشتراک را بررسی کنید.',
     address: 'آدرس', port: 'پورت', network: 'شبکه', security: 'امنیت', sni: 'SNI',
     previewNote: 'حالت پیش‌نمایش — با داده‌ی نمونه',
@@ -926,10 +935,12 @@ const I18N = {
     expiryDate: 'Expiry date', plan: 'Plan', renew: 'Renew', copyLink: 'Copy subscription link',
     copied: 'Copied!', scanQr: 'Show QR', availableServers: 'Available servers',
     searchPlaceholder: 'Search server or country…', noResults: 'No results',
-    details: 'Technical details', quickAdd: 'Quick add to:', moreApps: 'More',
+    details: 'Technical details', quickAdd: 'Quick add to:',
     support: 'Support', channel: 'Telegram channel', buyRenew: 'Buy / Renew',
     close: 'Close', copyConfig: 'Copy config', addToApp: 'Add to app',
     copyAllConfigs: 'Copy all configs', copiedAll: (n) => `Copied ${n} configs!`,
+    appNotInstalled: (name) => `${name} isn't installed on your phone`,
+    clipboardHint: (name) => `Copied — open ${name} and use "Import from Clipboard"`,
     loadErrorTitle: 'Could not load your data', loadErrorBody: 'Showing sample data — check the subscription link.',
     address: 'Address', port: 'Port', network: 'Network', security: 'Security', sni: 'SNI',
     previewNote: 'Preview mode — sample data',
@@ -1326,6 +1337,7 @@ function ringMarkup(id, colorVar, severity) {
         <div class="ring-center">
           <div class="ring-value" id="${id}Value">–</div>
           <div class="ring-unit" id="${id}Unit"></div>
+          <div class="ring-sublabel" id="${id}Sublabel"></div>
         </div>
       </div>
       <div class="ring-caption" id="${id}Caption"></div>
@@ -1365,10 +1377,12 @@ function renderRings(data) {
     const remain = Math.max(total - used, 0);
     el('#dataRingValue').textContent = formatBytes(remain).split(' ')[0];
     el('#dataRingUnit').textContent = formatBytes(remain).split(' ').slice(1).join(' ');
+    el('#dataRingSublabel').textContent = t('remaining');
   } else {
     setRing('dataRing', 0.06, 'ok');
     el('#dataRingValue').textContent = '∞';
     el('#dataRingUnit').textContent = t('unlimited');
+    el('#dataRingSublabel').textContent = '';
   }
   el('#dataRingCaption').textContent = t('dataUsage');
 
@@ -1382,11 +1396,13 @@ function renderRings(data) {
     const sev = daysLeft <= 0 ? 'danger' : (daysLeft <= CONFIG.behavior.warnDaysLeft ? 'warn' : 'ok');
     setRing('timeRing', frac, sev);
     el('#timeRingValue').textContent = localizeDigits(daysLeft);
-    el('#timeRingUnit').textContent = t('daysUnit') + ' ' + t('remaining');
+    el('#timeRingUnit').textContent = t('daysUnit');
+    el('#timeRingSublabel').textContent = t('remaining');
   } else {
     setRing('timeRing', 0.06, 'ok');
     el('#timeRingValue').textContent = '∞';
     el('#timeRingUnit').textContent = t('noExpiry');
+    el('#timeRingSublabel').textContent = '';
   }
   el('#timeRingCaption').textContent = t('timeLeft');
 }
@@ -1465,25 +1481,37 @@ function detectPlatform() {
   return 'other';
 }
 
-let showAllApps = false;
 function renderQuickAdd(data) {
   const platform = detectPlatform();
-  const sorted = CONFIG.apps.slice().sort((a, b) => {
-    const aMatch = a.platforms.includes(platform) ? 0 : 1;
-    const bMatch = b.platforms.includes(platform) ? 0 : 1;
-    return aMatch - bMatch;
-  });
-  const visible = showAllApps ? sorted : sorted.slice(0, 3);
   const chipHtml = (app) => {
-    const href = app.buildUrl ? app.buildUrl(data.subUrl) : app.importUrl.replace('{url}', encodeURIComponent(data.subUrl));
-    return `<a class="app-chip" href="${escapeHtml(href)}"><span class="app-icon">${app.icon}</span>${escapeHtml(app.name)}</a>`;
+    const isMatch = app.platforms.includes(platform);
+    if (!isMatch) {
+      return `<button class="app-chip is-disabled" type="button" disabled aria-disabled="true"><span class="app-icon">${app.icon}</span>${escapeHtml(app.name)}</button>`;
+    }
+    const btnClass = app.mode === 'clipboard' ? 'js-app-clipboard' : 'js-app-deeplink';
+    return `<button class="app-chip ${btnClass}" type="button" data-app-id="${escapeHtml(app.id)}"><span class="app-icon">${app.icon}</span>${escapeHtml(app.name)}</button>`;
   };
-  let html = visible.map(chipHtml).join('');
-  if (!showAllApps && sorted.length > 3) {
-    html += `<button class="app-chip is-more js-more-apps" type="button">+${localizeDigits(sorted.length - 3)} ${t('moreApps')}</button>`;
-  }
+  const html = CONFIG.apps.map(chipHtml).join('');
   els('.app-row').forEach((row) => { row.innerHTML = html; });
   els('.quickadd-title').forEach((n) => { n.textContent = t('quickAdd'); });
+}
+
+// Attempts to open an already-installed app via a custom URL scheme. If the
+// page is still visible a couple seconds later, nothing took over the
+// screen, so the app is very likely not installed — the caller's onFail
+// runs in that case instead of silently doing nothing.
+function tryOpenApp(url, onFail) {
+  let settled = false;
+  const finish = (installed) => {
+    if (settled) return;
+    settled = true;
+    document.removeEventListener('visibilitychange', onVisibility);
+    if (!installed) onFail();
+  };
+  const onVisibility = () => { if (document.hidden) finish(true); };
+  document.addEventListener('visibilitychange', onVisibility);
+  window.location.href = url;
+  setTimeout(() => finish(false), 1800);
 }
 
 function renderSupportRow() {
@@ -1635,10 +1663,21 @@ function wireEvents(data) {
   // one of the two is visible at a given viewport width via CSS. Attaching
   // to a single element by id would silently miss clicks on whichever copy
   // CSS is actually showing.
-  document.addEventListener('click', (e) => {
-    if (e.target.closest('.js-more-apps')) {
-      showAllApps = true;
-      renderQuickAdd(data);
+  document.addEventListener('click', async (e) => {
+    const clipBtn = e.target.closest('.js-app-clipboard');
+    if (clipBtn) {
+      const app = CONFIG.apps.find((a) => a.id === clipBtn.dataset.appId);
+      const ok = await copyToClipboard(data.subUrl);
+      if (ok && app) showToast(t('clipboardHint')(app.name));
+      return;
+    }
+    const deepBtn = e.target.closest('.js-app-deeplink');
+    if (deepBtn) {
+      const app = CONFIG.apps.find((a) => a.id === deepBtn.dataset.appId);
+      if (!app) return;
+      const name = encodeURIComponent(CONFIG.brand.name || 'Sub');
+      const url = app.importUrl.replace('{url}', encodeURIComponent(data.subUrl)).replace('{name}', name);
+      tryOpenApp(url, () => showToast(t('appNotInstalled')(app.name)));
     }
   });
 
