@@ -2,6 +2,7 @@
 
 یک صفحه‌ی اشتراک شیک، تیره، شیشه‌ای (Glassmorphism) و کاملاً تک‌فایل برای پنل **PasarGuard** — بدون نیاز به Build، بدون نیاز به دیتابیس یا سرور جدا. کافیه یک فایل `index.html` رو توی پنل خودتون جا بدید.
 
+
 ---
 
 ## این پروژه چطور کار می‌کند؟
@@ -151,7 +152,13 @@ curl -I "https://your-sub-domain/sub/TOKEN"
 
 **QR باز نمی‌شه:** این تمپلیت برای رسم QR از یک کتابخونه‌ی سبک روی CDN استفاده می‌کنه (تنها وابستگی بیرونی این پروژه). اگه بار نشد، دکمه‌ی کپی لینک همچنان کار می‌کنه. برای حذف کامل وابستگی، فایل کتابخونه رو دانلود کنید و آدرس `cdnjs.cloudflare.com` توی `script.js`ی داخل فایل رو به مسیر لوکالتون عوض کنید.
 
-**فونت وزیرمتن لود نمی‌شه:** تنها درخواست شبکه‌ای که این صفحه خودش می‌زنه همینه (از Google Fonts)؛ اگه بلاک بشه، فونت‌های سیستمی (Tahoma/Segoe UI) جایگزین می‌شن و صفحه همچنان درست دیده می‌شه.
+**فونت وزیرمتن لود نمی‌شه:** این درخواست به‌صورت غیرمسدودکننده (async) لود می‌شه؛ اگه بلاک بشه، فونت‌های سیستمی (Tahoma/Segoe UI) جایگزین می‌شن و صفحه بدون هیچ تأخیری نشون داده می‌شه.
+
+**لینک ساب توی مرورگر باز نمی‌شه (مخصوصاً روی یک اپراتور خاص مثل ایرانسل):** اول این رو مشخص کنید: آیا مشکل مخصوص همین تمپلیته یا مربوط به فیلترینگ/اتصال به کل دامنه‌ی پنلتونه؟
+
+1. همون لینک رو با یک شبکه‌ی دیگه (وای‌فای یا اپراتور دیگه) امتحان کنید. اگه اونجا هم باز نشه، مشکل از فیلترینگ خودِ دامنه/سروره، نه این تمپلیت — نصب یا حذف این تمپلیت روش تأثیری نداره.
+2. اگه فقط روی همون اپراتور خاص مشکل داره: نسخه‌ی فعلی این تمپلیت لود فونت گوگل رو به‌صورت async انجام می‌ده تا اگه اون دامنه (fonts.googleapis.com) روی شبکه‌ای بلاک/کند باشه، مرورگر منتظرش نمونه و صفحه بدون تأخیر باز بشه. اگه از نسخه‌ی قدیمی‌تر این تمپلیت استفاده می‌کنید، آپدیت به آخرین نسخه (`git pull && sudo bash install.sh`) این مشکل خاص رو حل می‌کنه.
+3. اگه بعد از آپدیت هم مشکل ادامه داشت، برای تست می‌تونید موقتاً تمپلیت رو حذف کنید (`sudo bash install.sh --uninstall` — دقیقاً همون چیزی رو که قبل از نصب این تمپلیت بوده برمی‌گردونه) و دوباره روی همون اپراتور تست کنید. اگه با حذف تمپلیت هم مشکل حل نشد، یعنی قطعاً به این تمپلیت مربوط نیست.
 
 ---
 
@@ -164,8 +171,6 @@ It reads live data through the exact same standard subscription contract every V
 **Install:** `sudo bash install.sh` (or see the manual steps above — same `.env` keys as the official template: `CUSTOM_TEMPLATES_DIRECTORY`, `SUBSCRIPTION_PAGE_TEMPLATE`). **Remove:** `sudo bash install.sh --uninstall` — restores whatever was there before, and only touches `.env` lines that match exactly what the installer added.
 **Customize:** edit the `CONFIG` block at the top of `index.html`.
 **Preview locally:** just open `index.html` in a browser — it shows sample data when there's nothing to fetch.
-
-Inspired by [PasarGuard/subscription-template](https://github.com/PasarGuard/subscription-template) and [P4r34m/PasarGuard-Subscription-Template](https://github.com/P4r34m/PasarGuard-Subscription-Template).
 
 ---
 

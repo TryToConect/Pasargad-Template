@@ -16,13 +16,17 @@
      app-like without needing a second file next to this one. -->
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Subscription%22%2C%22short_name%22%3A%22Sub%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23080B10%22%2C%22theme_color%22%3A%22%23080B10%22%7D">
 
-<!-- Optional progressive enhancement: a proper Persian UI typeface. This is
-     the ONLY external network request this page ever makes on its own —
-     if it's blocked or slow, the system-font fallback stack in the CSS
-     below still looks perfectly fine, nothing breaks. -->
+<!-- Optional progressive enhancement: a proper Persian UI typeface.
+     Loaded the async way (media="print" swapped to "all" on load) so it can
+     NEVER block the page from rendering — on a network where this domain is
+     slow or blocked outright, a plain <link rel="stylesheet"> would make the
+     browser sit and wait before showing anything at all, which looks exactly
+     like "the page won't open." This way the page always renders
+     immediately with the system-font fallback, and only swaps to the nicer
+     font if/when it actually finishes loading. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 
 <style>
 /* ==========================================================================
@@ -1724,8 +1728,14 @@ function ensureQrLib() {
   qrLibPromise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    s.onload = () => (window.QRCode ? resolve(window.QRCode) : reject(new Error('QRCode missing after load')));
-    s.onerror = () => reject(new Error('QR script failed to load'));
+    // A blocked/filtered network sometimes silently stalls a request instead
+    // of cleanly failing it (neither onload nor onerror ever fires) — this
+    // timeout is what guarantees the QR modal still shows a fallback message
+    // instead of spinning forever. This only affects the QR button itself;
+    // it's loaded lazily on click, never on initial page load.
+    const timer = setTimeout(() => reject(new Error('QR script load timed out')), 6000);
+    s.onload = () => { clearTimeout(timer); window.QRCode ? resolve(window.QRCode) : reject(new Error('QRCode missing after load')); };
+    s.onerror = () => { clearTimeout(timer); reject(new Error('QR script failed to load')); };
     document.head.appendChild(s);
   });
   return qrLibPromise;
