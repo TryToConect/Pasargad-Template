@@ -910,7 +910,7 @@ const CONFIG = {
 const I18N = {
   fa: {
     subStatus: 'وضعیت اشتراک', active: 'فعال', limited: 'اتمام حجم', expired: 'منقضی شده',
-    onHold: 'در انتظار فعال‌سازی', unknown: 'نامشخص', checking: 'در حال بررسی…',
+    onHold: 'در انتظار فعال‌سازی', unknown: 'نامشخص', checking: 'در حال بررسی…', disabled: 'غیرفعال',
     dataUsage: 'حجم مصرفی', timeLeft: 'اعتبار زمانی', remaining: 'باقی‌مانده',
     unlimited: 'نامحدود', noExpiry: 'بدون انقضا', daysUnit: 'روز', usedOf: 'از',
     expiryDate: 'تاریخ انقضا', plan: 'پلن', renew: 'تمدید', copyLink: 'کپی لینک اشتراک',
@@ -926,10 +926,12 @@ const I18N = {
     address: 'آدرس', port: 'پورت', network: 'شبکه', security: 'امنیت', sni: 'SNI',
     previewNote: 'حالت پیش‌نمایش — با داده‌ی نمونه',
     encryptedNote: 'اتصال شما رمزنگاری شده است',
+    pendingActivation: 'پس از اولین اتصال محاسبه می‌شود',
+    pending: 'در انتظار',
   },
   en: {
     subStatus: 'Subscription', active: 'Active', limited: 'Data limit reached', expired: 'Expired',
-    onHold: 'On hold', unknown: 'Unknown', checking: 'Checking…',
+    onHold: 'On hold', unknown: 'Unknown', checking: 'Checking…', disabled: 'Disabled',
     dataUsage: 'Data usage', timeLeft: 'Time left', remaining: 'remaining',
     unlimited: 'Unlimited', noExpiry: 'No expiry', daysUnit: 'days', usedOf: 'of',
     expiryDate: 'Expiry date', plan: 'Plan', renew: 'Renew', copyLink: 'Copy subscription link',
@@ -945,6 +947,8 @@ const I18N = {
     address: 'Address', port: 'Port', network: 'Network', security: 'Security', sni: 'SNI',
     previewNote: 'Preview mode — sample data',
     encryptedNote: 'Your connection is encrypted',
+    pendingActivation: 'Calculated after your first connection',
+    pending: 'Pending',
   },
 };
 let lang = CONFIG.language.default === 'en' ? 'en' : 'fa';
@@ -1204,6 +1208,42 @@ function tryReadInjectedData() {
   } catch (e) { return null; }
 }
 
+// PasarGuard's own custom-template contract (confirmed from the official
+// template's source) injects `window.__INITIAL_DATA__.user.status` as a
+// plain string ('active' | 'on_hold' | 'limited' | 'expired' | 'disabled')
+// — the exact panel-side status, not a guess. Same for `.apps`: an array
+// the ADMIN configures in PasarGuard's own Settings → Subscription →
+// Applications screen, so if it's present we use *that* instead of our own
+// guesses — it's already whatever the admin has tested and knows works.
+function parseInjectedUser(injected) {
+  try {
+    const u = injected && injected.user;
+    if (!u || typeof u !== 'object') return null;
+    return {
+      username: u.username || '',
+      status: typeof u.status === 'string' ? u.status : '',
+      supportUrl: (u.admin && u.admin.support_url) || '',
+    };
+  } catch (e) { return null; }
+}
+function parseInjectedApps(injected) {
+  try {
+    const list = injected && injected.apps;
+    if (!Array.isArray(list) || list.length === 0) return null;
+    const apps = list
+      .filter((a) => a && a.import_url)
+      .map((a) => ({
+        name: a.name || 'App',
+        iconUrl: a.icon_url || '',
+        importUrl: a.import_url,
+        platforms: a.platform ? [String(a.platform).toLowerCase()] : [],
+        recommended: !!a.recommended,
+        mode: 'deeplink',
+      }));
+    return apps.length ? apps : null;
+  } catch (e) { return null; }
+}
+
 function parseUsernameFromDisposition(disposition) {
   if (!disposition) return '';
   const m = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
@@ -1258,36 +1298,50 @@ async function fetchRawSubscription(url) {
   }
 }
 
+// Fallback heuristic for when the panel doesn't (or can't) tell us the
+// exact status directly: a account with no expiry AND zero usage yet has
+// most likely not had its countdown started (on_hold) rather than
+// genuinely being unlimited — once they connect at least once, expire
+// either gets set for real or it truly is unlimited.
 function deriveStatus(upload, download, total, expire) {
   const now = Math.floor(Date.now() / 1000);
+  const hasUsage = (upload + download) > 0;
   if (expire && expire > 0 && expire < now) return 'expired';
   if (total && total > 0 && upload + download >= total) return 'limited';
+  if ((!expire || expire <= 0) && !hasUsage) return 'on_hold';
   return 'active';
+}
+function resolveStatus(injectedUser, upload, download, total, expire) {
+  const known = ['active', 'on_hold', 'limited', 'expired', 'disabled'];
+  if (injectedUser && known.includes(injectedUser.status)) return injectedUser.status;
+  return deriveStatus(upload, download, total, expire);
 }
 
 async function loadSubscriptionData() {
   const subUrl = resolveSubUrl();
   const injected = tryReadInjectedData();
+  const injectedUser = parseInjectedUser(injected);
+  const injectedApps = parseInjectedApps(injected);
 
   if (isPreviewContext()) {
-    return Object.assign({}, SAMPLE_DATA, injected || {}, { subUrl, isSample: true });
+    return Object.assign({}, SAMPLE_DATA, { subUrl, isSample: true, apps: injectedApps });
   }
 
   try {
     const raw = await fetchRawSubscription(subUrl);
     if (!raw.hadUserinfo && raw.configs.length === 0) throw new Error('empty response');
-    const status = deriveStatus(raw.upload, raw.download, raw.total, raw.expire);
+    const status = resolveStatus(injectedUser, raw.upload, raw.download, raw.total, raw.expire);
     return {
       isSample: false,
-      username: raw.username || (injected && injected.username) || '',
+      username: raw.username || (injectedUser && injectedUser.username) || '',
       status,
       upload: raw.upload, download: raw.download, total: raw.total, expire: raw.expire,
-      supportUrl: raw.supportUrl || (injected && injected.supportUrl) || '',
-      subUrl, configs: raw.configs,
+      supportUrl: raw.supportUrl || (injectedUser && injectedUser.supportUrl) || '',
+      subUrl, configs: raw.configs, apps: injectedApps,
     };
   } catch (e) {
     console.warn('[sub-template] could not fetch live subscription data, showing sample data:', e);
-    return Object.assign({}, SAMPLE_DATA, { subUrl, isSample: true, loadFailed: true });
+    return Object.assign({}, SAMPLE_DATA, { subUrl, isSample: true, loadFailed: true, apps: injectedApps });
   }
 }
 
@@ -1317,6 +1371,7 @@ function renderStatusBadge(status) {
   const map = {
     active: ['is-active', t('active')], limited: ['is-limited', t('limited')],
     expired: ['is-expired', t('expired')], on_hold: ['is-hold', t('onHold')],
+    disabled: ['is-expired', t('disabled')],
   };
   const [cls, label] = map[status] || ['is-unknown', t('unknown')];
   const badge = el('#statusBadge');
@@ -1390,7 +1445,15 @@ function renderRings(data) {
   // panel, never "how many days was this plan for" — so the fill fraction
   // is deliberately just an urgency cue against a fixed reference window
   // (most resold plans are monthly), not a precise "% of plan consumed".
-  if (data.expire && data.expire > 0) {
+  if (data.status === 'on_hold') {
+    // Countdown hasn't started yet — expire=0 here means "not decided",
+    // not "unlimited", so this gets its own calm/neutral look rather than
+    // the infinity symbol used for genuinely no-expiry plans.
+    setRing('timeRing', 0.04, 'ok');
+    el('#timeRingValue').textContent = '⏳';
+    el('#timeRingUnit').textContent = t('pending');
+    el('#timeRingSublabel').textContent = '';
+  } else if (data.expire && data.expire > 0) {
     const daysLeft = Math.max(daysBetween(now, data.expire), 0);
     const frac = 1 - Math.min(daysLeft / CONFIG.behavior.ringReferenceDays, 1);
     const sev = daysLeft <= 0 ? 'danger' : (daysLeft <= CONFIG.behavior.warnDaysLeft ? 'warn' : 'ok');
@@ -1409,7 +1472,9 @@ function renderRings(data) {
 
 function renderMeta(data) {
   el('#metaExpiryLabel').textContent = t('expiryDate');
-  el('#metaExpiryValue').textContent = data.expire ? formatDate(data.expire) : t('noExpiry');
+  el('#metaExpiryValue').textContent = data.status === 'on_hold'
+    ? t('pendingActivation')
+    : (data.expire ? formatDate(data.expire) : t('noExpiry'));
   el('#metaPlanLabel').textContent = t('plan');
   el('#metaPlanValue').textContent = data.total ? formatBytes(data.total) : t('unlimited');
 }
@@ -1481,17 +1546,32 @@ function detectPlatform() {
   return 'other';
 }
 
+function getEffectiveApps(data) {
+  // Prefer whatever the panel itself provides (admin-configured in
+  // PasarGuard's own Settings → Subscription → Applications) — that's
+  // already tested against real devices by the admin. Only fall back to
+  // our own curated list when the panel doesn't supply one.
+  if (data.apps && data.apps.length) {
+    return data.apps.slice().sort((a, b) => (b.recommended ? 1 : 0) - (a.recommended ? 1 : 0));
+  }
+  return CONFIG.apps;
+}
+
 function renderQuickAdd(data) {
   const platform = detectPlatform();
-  const chipHtml = (app) => {
+  const apps = getEffectiveApps(data);
+  const chipHtml = (app, idx) => {
+    const iconHtml = app.iconUrl
+      ? `<img src="${escapeHtml(app.iconUrl)}" alt="" style="width:15px;height:15px;border-radius:4px;object-fit:cover;flex-shrink:0;">`
+      : `<span class="app-icon">${app.icon || '📱'}</span>`;
     const isMatch = app.platforms.includes(platform);
     if (!isMatch) {
-      return `<button class="app-chip is-disabled" type="button" disabled aria-disabled="true"><span class="app-icon">${app.icon}</span>${escapeHtml(app.name)}</button>`;
+      return `<button class="app-chip is-disabled" type="button" disabled aria-disabled="true">${iconHtml}${escapeHtml(app.name)}</button>`;
     }
     const btnClass = app.mode === 'clipboard' ? 'js-app-clipboard' : 'js-app-deeplink';
-    return `<button class="app-chip ${btnClass}" type="button" data-app-id="${escapeHtml(app.id)}"><span class="app-icon">${app.icon}</span>${escapeHtml(app.name)}</button>`;
+    return `<button class="app-chip ${btnClass}" type="button" data-app-index="${idx}">${iconHtml}${escapeHtml(app.name)}</button>`;
   };
-  const html = CONFIG.apps.map(chipHtml).join('');
+  const html = apps.map(chipHtml).join('');
   els('.app-row').forEach((row) => { row.innerHTML = html; });
   els('.quickadd-title').forEach((n) => { n.textContent = t('quickAdd'); });
 }
@@ -1666,17 +1746,22 @@ function wireEvents(data) {
   document.addEventListener('click', async (e) => {
     const clipBtn = e.target.closest('.js-app-clipboard');
     if (clipBtn) {
-      const app = CONFIG.apps.find((a) => a.id === clipBtn.dataset.appId);
+      const app = getEffectiveApps(data)[Number(clipBtn.dataset.appIndex)];
       const ok = await copyToClipboard(data.subUrl);
       if (ok && app) showToast(t('clipboardHint')(app.name));
       return;
     }
     const deepBtn = e.target.closest('.js-app-deeplink');
     if (deepBtn) {
-      const app = CONFIG.apps.find((a) => a.id === deepBtn.dataset.appId);
+      const app = getEffectiveApps(data)[Number(deepBtn.dataset.appIndex)];
       if (!app) return;
       const name = encodeURIComponent(CONFIG.brand.name || 'Sub');
-      const url = app.importUrl.replace('{url}', encodeURIComponent(data.subUrl)).replace('{name}', name);
+      let url = app.importUrl.replace('{url}', encodeURIComponent(data.subUrl)).replace('{name}', name);
+      // Panel-provided import_url is meant to already have {url} substituted
+      // server-side — but if it somehow still has the literal placeholder
+      // (older panel version, or opened outside a real render), fall back
+      // to substituting it ourselves so the button still works.
+      if (url.includes('{url}')) url = url.replace('{url}', encodeURIComponent(data.subUrl));
       tryOpenApp(url, () => showToast(t('appNotInstalled')(app.name)));
     }
   });
