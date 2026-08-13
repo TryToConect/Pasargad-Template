@@ -749,6 +749,10 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
         <div class="meta-label" id="metaPlanLabel"></div>
         <div class="meta-value" id="metaPlanValue">–</div>
       </div>
+      <div class="meta-item hidden" id="metaHwidItem">
+        <div class="meta-label" id="metaHwidLabel"></div>
+        <div class="meta-value" id="metaHwidValue">–</div>
+      </div>
     </div>
 
     <div class="actions-row">
@@ -913,11 +917,12 @@ const CONFIG = {
 /* ============================ 2) i18n strings ============================ */
 const I18N = {
   fa: {
-    subStatus: 'وضعیت اشتراک', active: 'فعال', limited: 'اتمام حجم', expired: 'منقضی شده',
+    subStatus: 'وضعیت اشتراک', active: 'فعال', limited: 'پایان حجم', expired: 'پایان زمان',
     onHold: 'در انتظار فعال‌سازی', unknown: 'نامشخص', checking: 'در حال بررسی…', disabled: 'غیرفعال',
     dataUsage: 'حجم مصرفی', timeLeft: 'اعتبار زمانی', remaining: 'باقی‌مانده',
     unlimited: 'نامحدود', noExpiry: 'بدون انقضا', daysUnit: 'روز', usedOf: 'از',
     expiryDate: 'تاریخ انقضا', plan: 'پلن', renew: 'تمدید', copyLink: 'کپی لینک اشتراک',
+    deviceLimit: 'تعداد دستگاه',
     copied: 'کپی شد!', scanQr: 'نمایش QR', availableServers: 'سرورهای موجود',
     searchPlaceholder: 'جستجوی سرور یا کشور…', noResults: 'موردی پیدا نشد',
     details: 'جزئیات فنی', quickAdd: 'افزودن سریع به:',
@@ -939,6 +944,7 @@ const I18N = {
     dataUsage: 'Data usage', timeLeft: 'Time left', remaining: 'remaining',
     unlimited: 'Unlimited', noExpiry: 'No expiry', daysUnit: 'days', usedOf: 'of',
     expiryDate: 'Expiry date', plan: 'Plan', renew: 'Renew', copyLink: 'Copy subscription link',
+    deviceLimit: 'Device limit',
     copied: 'Copied!', scanQr: 'Show QR', availableServers: 'Available servers',
     searchPlaceholder: 'Search server or country…', noResults: 'No results',
     details: 'Technical details', quickAdd: 'Quick add to:',
@@ -1183,7 +1189,7 @@ function parseConfigList(bodyText) {
 /* ========================= 6) Subscription data flow ======================= */
 const SAMPLE_DATA = {
   isSample: true,
-  username: 'demo', status: 'active',
+  username: 'demo', status: 'active', hwidLimit: 1,
   upload: 3 * 1024 ** 3, download: 19 * 1024 ** 3, total: 50 * 1024 ** 3,
   expire: Math.floor(Date.now() / 1000) + 7 * 86400,
   supportUrl: '', subUrl: '#',
@@ -1223,10 +1229,17 @@ function parseInjectedUser(injected) {
   try {
     const u = injected && injected.user;
     if (!u || typeof u !== 'object') return null;
+    // Field name isn't confirmed for this one (PasarGuard added HWID-limit
+    // subscription hints recently and the exact injected shape wasn't
+    // available to check) — try the plausible spellings, use whichever
+    // actually resolves to a number, and leave it out entirely otherwise.
+    const hwidRaw = ['hwid_limit', 'hwidLimit', 'device_limit', 'max_devices']
+      .map((k) => u[k]).find((v) => v !== undefined && v !== null && !isNaN(Number(v)));
     return {
       username: u.username || '',
       status: typeof u.status === 'string' ? u.status : '',
       supportUrl: (u.admin && u.admin.support_url) || '',
+      hwidLimit: hwidRaw !== undefined ? Number(hwidRaw) : null,
     };
   } catch (e) { return null; }
 }
@@ -1287,12 +1300,22 @@ async function fetchRawSubscription(url) {
     let profileTitle = res.headers.get('profile-title') || '';
     try { profileTitle = decodeURIComponent(profileTitle); } catch (e) { /* leave as-is */ }
     const username = parseUsernameFromDisposition(res.headers.get('content-disposition') || '');
+    // Same situation as above: no confirmed header name for this, so a
+    // small set of plausible ones (matching PasarGuard's own naming
+    // convention for its other subscription headers) get tried; if none of
+    // them are present the field just stays null and nothing is shown.
+    const hwidHeaderNames = ['hwid-limit', 'subscription-hwid-limit', 'x-hwid-limit', 'hwid-device-limit'];
+    let hwidLimit = null;
+    for (const name of hwidHeaderNames) {
+      const v = res.headers.get(name);
+      if (v !== null && v !== '' && !isNaN(Number(v))) { hwidLimit = Number(v); break; }
+    }
     const bodyText = await res.text();
     const configs = parseConfigList(bodyText);
     return {
       upload: userinfo.upload || 0, download: userinfo.download || 0,
       total: userinfo.total || 0, expire: userinfo.expire || 0,
-      profileTitle, username, supportUrl: res.headers.get('support-url') || '',
+      profileTitle, username, hwidLimit, supportUrl: res.headers.get('support-url') || '',
       webPageUrl: res.headers.get('profile-web-page-url') || '',
       configs, hadUserinfo: !!userinfoRaw,
     };
@@ -1335,10 +1358,13 @@ async function loadSubscriptionData() {
     const raw = await fetchRawSubscription(subUrl);
     if (!raw.hadUserinfo && raw.configs.length === 0) throw new Error('empty response');
     const status = resolveStatus(injectedUser, raw.upload, raw.download, raw.total, raw.expire);
+    const hwidLimit = (injectedUser && injectedUser.hwidLimit !== null && injectedUser.hwidLimit !== undefined)
+      ? injectedUser.hwidLimit
+      : raw.hwidLimit;
     return {
       isSample: false,
       username: raw.username || (injectedUser && injectedUser.username) || '',
-      status,
+      status, hwidLimit,
       upload: raw.upload, download: raw.download, total: raw.total, expire: raw.expire,
       supportUrl: raw.supportUrl || (injectedUser && injectedUser.supportUrl) || '',
       subUrl, configs: raw.configs, apps: injectedApps,
@@ -1481,6 +1507,16 @@ function renderMeta(data) {
     : (data.expire ? formatDate(data.expire) : t('noExpiry'));
   el('#metaPlanLabel').textContent = t('plan');
   el('#metaPlanValue').textContent = data.total ? formatBytes(data.total) : t('unlimited');
+
+  // Only shown when we actually managed to read a device/HWID limit signal
+  // from the panel — see the comments around parseInjectedUser /
+  // fetchRawSubscription for why this can't always be found.
+  const hasHwid = data.hwidLimit !== null && data.hwidLimit !== undefined;
+  el('#metaHwidItem').classList.toggle('hidden', !hasHwid);
+  if (hasHwid) {
+    el('#metaHwidLabel').textContent = t('deviceLimit');
+    el('#metaHwidValue').textContent = data.hwidLimit > 0 ? localizeDigits(data.hwidLimit) : t('unlimited');
+  }
 }
 
 function renderActions(data) {
