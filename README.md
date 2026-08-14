@@ -182,7 +182,6 @@ It reads live data through the exact same standard subscription contract every V
 **Customize:** edit the `CONFIG` block at the top of `index.html`.
 **Preview locally:** just open `index.html` in a browser — it shows sample data when there's nothing to fetch.
 
-
 ---
 
 ## License
