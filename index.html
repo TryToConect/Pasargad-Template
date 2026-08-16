@@ -258,7 +258,6 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--badge-c) 25%, transparent);
 }
 .badge.is-active { --badge-c: var(--clr-ok); }
-.badge.is-limited { --badge-c: var(--clr-amber); }
 .badge.is-expired { --badge-c: var(--clr-danger); }
 .badge.is-hold, .badge.is-unknown { --badge-c: var(--clr-hold); }
 
@@ -542,10 +541,16 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
 .footnote-line {
   margin-bottom: 6px;
 }
-.footnote-credit {
+.footnote-credit-row {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+.footnote-year {
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.footnote-credit {
   color: var(--ink-2);
   text-decoration: none;
   font-weight: 700;
@@ -749,10 +754,6 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
         <div class="meta-label" id="metaPlanLabel"></div>
         <div class="meta-value" id="metaPlanValue">–</div>
       </div>
-      <div class="meta-item hidden" id="metaHwidItem">
-        <div class="meta-label" id="metaHwidLabel"></div>
-        <div class="meta-value" id="metaHwidValue">–</div>
-      </div>
     </div>
 
     <div class="actions-row">
@@ -798,10 +799,13 @@ html[dir="rtl"] .badge { padding: 5px 10px 5px 12px; }
 
   <div class="footnote" id="footnote">
     <div class="footnote-line" id="footnoteSecurity"></div>
-    <a class="footnote-credit" id="footnoteCredit" href="#" target="_blank" rel="noopener">
+    <div class="footnote-credit-row">
       <svg class="footnote-gh-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      <span id="footnoteCreditText"></span>
-    </a>
+      <span class="footnote-year" id="footnoteYear"></span>
+      <a class="footnote-credit" id="footnoteCredit" href="#" target="_blank" rel="noopener">
+        <span id="footnoteCreditText"></span>
+      </a>
+    </div>
   </div>
 </div>
 
@@ -856,7 +860,8 @@ const CONFIG = {
     name: 'نام برند شما',       // fallback shown before data loads, or if the panel doesn't provide a username — the header normally shows each user's own PasarGuard username instead
     logoEmoji: '🛡️',            // used when logoUrl is empty
     logoUrl: '',                // optional: https://... or data:image/... URI
-    credit: 'TryToConect 2026', // shown at the very bottom of the page
+    credit: 'TryToConect',      // bold, clickable — the only part that's a link
+    creditYear: '2026',         // shown next to the icon, plain text, not part of the link
     creditUrl: 'https://github.com/TryToConect/Pasargad-Template',
   },
 
@@ -917,12 +922,11 @@ const CONFIG = {
 /* ============================ 2) i18n strings ============================ */
 const I18N = {
   fa: {
-    subStatus: 'وضعیت اشتراک', active: 'فعال', limited: 'پایان حجم', expired: 'پایان زمان',
-    onHold: 'در انتظار فعال‌سازی', unknown: 'نامشخص', checking: 'در حال بررسی…', disabled: 'غیرفعال',
+    subStatus: 'وضعیت اشتراک', active: 'فعال', onHold: 'در انتظار فعال‌سازی',
+    unknown: 'نامشخص', checking: 'در حال بررسی…', disabled: 'غیرفعال',
     dataUsage: 'حجم مصرفی', timeLeft: 'اعتبار زمانی', remaining: 'باقی‌مانده',
     unlimited: 'نامحدود', noExpiry: 'بدون انقضا', daysUnit: 'روز', usedOf: 'از',
     expiryDate: 'تاریخ انقضا', plan: 'پلن', renew: 'تمدید', copyLink: 'کپی لینک اشتراک',
-    deviceLimit: 'تعداد دستگاه',
     copied: 'کپی شد!', scanQr: 'نمایش QR', availableServers: 'سرورهای موجود',
     searchPlaceholder: 'جستجوی سرور یا کشور…', noResults: 'موردی پیدا نشد',
     details: 'جزئیات فنی', quickAdd: 'افزودن سریع به:',
@@ -939,12 +943,11 @@ const I18N = {
     pending: 'در انتظار',
   },
   en: {
-    subStatus: 'Subscription', active: 'Active', limited: 'Data limit reached', expired: 'Expired',
-    onHold: 'On hold', unknown: 'Unknown', checking: 'Checking…', disabled: 'Disabled',
+    subStatus: 'Subscription', active: 'Active', onHold: 'On hold',
+    unknown: 'Unknown', checking: 'Checking…', disabled: 'Disabled',
     dataUsage: 'Data usage', timeLeft: 'Time left', remaining: 'remaining',
     unlimited: 'Unlimited', noExpiry: 'No expiry', daysUnit: 'days', usedOf: 'of',
     expiryDate: 'Expiry date', plan: 'Plan', renew: 'Renew', copyLink: 'Copy subscription link',
-    deviceLimit: 'Device limit',
     copied: 'Copied!', scanQr: 'Show QR', availableServers: 'Available servers',
     searchPlaceholder: 'Search server or country…', noResults: 'No results',
     details: 'Technical details', quickAdd: 'Quick add to:',
@@ -1189,7 +1192,7 @@ function parseConfigList(bodyText) {
 /* ========================= 6) Subscription data flow ======================= */
 const SAMPLE_DATA = {
   isSample: true,
-  username: 'demo', status: 'active', hwidLimit: 1,
+  username: 'demo', status: 'active',
   upload: 3 * 1024 ** 3, download: 19 * 1024 ** 3, total: 50 * 1024 ** 3,
   expire: Math.floor(Date.now() / 1000) + 7 * 86400,
   supportUrl: '', subUrl: '#',
@@ -1220,29 +1223,24 @@ function tryReadInjectedData() {
 
 // PasarGuard's own custom-template contract (confirmed from the official
 // template's source) injects `window.__INITIAL_DATA__.user.status` as a
-// plain string ('active' | 'on_hold' | 'limited' | 'expired' | 'disabled')
-// — the exact panel-side status, not a guess. Same for `.apps`: an array
-// the ADMIN configures in PasarGuard's own Settings → Subscription →
-// Applications screen, so if it's present we use *that* instead of our own
-// guesses — it's already whatever the admin has tested and knows works.
+// plain string — the exact panel-side status. Only 'disabled' is used from
+// it here (that's an admin action with no usage-based signal at all); the
+// other states are computed from the numbers below.
 function parseInjectedUser(injected) {
   try {
     const u = injected && injected.user;
     if (!u || typeof u !== 'object') return null;
-    // Field name isn't confirmed for this one (PasarGuard added HWID-limit
-    // subscription hints recently and the exact injected shape wasn't
-    // available to check) — try the plausible spellings, use whichever
-    // actually resolves to a number, and leave it out entirely otherwise.
-    const hwidRaw = ['hwid_limit', 'hwidLimit', 'device_limit', 'max_devices']
-      .map((k) => u[k]).find((v) => v !== undefined && v !== null && !isNaN(Number(v)));
     return {
       username: u.username || '',
       status: typeof u.status === 'string' ? u.status : '',
       supportUrl: (u.admin && u.admin.support_url) || '',
-      hwidLimit: hwidRaw !== undefined ? Number(hwidRaw) : null,
     };
   } catch (e) { return null; }
 }
+// The ADMIN configures this in PasarGuard's own Settings → Subscription →
+// Applications screen — if it's present, it's used instead of the app's
+// own hardcoded CONFIG.apps fallback list, since it's already whatever the
+// admin has tested and knows works on real devices.
 function parseInjectedApps(injected) {
   try {
     const list = injected && injected.apps;
@@ -1300,22 +1298,12 @@ async function fetchRawSubscription(url) {
     let profileTitle = res.headers.get('profile-title') || '';
     try { profileTitle = decodeURIComponent(profileTitle); } catch (e) { /* leave as-is */ }
     const username = parseUsernameFromDisposition(res.headers.get('content-disposition') || '');
-    // Same situation as above: no confirmed header name for this, so a
-    // small set of plausible ones (matching PasarGuard's own naming
-    // convention for its other subscription headers) get tried; if none of
-    // them are present the field just stays null and nothing is shown.
-    const hwidHeaderNames = ['hwid-limit', 'subscription-hwid-limit', 'x-hwid-limit', 'hwid-device-limit'];
-    let hwidLimit = null;
-    for (const name of hwidHeaderNames) {
-      const v = res.headers.get(name);
-      if (v !== null && v !== '' && !isNaN(Number(v))) { hwidLimit = Number(v); break; }
-    }
     const bodyText = await res.text();
     const configs = parseConfigList(bodyText);
     return {
       upload: userinfo.upload || 0, download: userinfo.download || 0,
       total: userinfo.total || 0, expire: userinfo.expire || 0,
-      profileTitle, username, hwidLimit, supportUrl: res.headers.get('support-url') || '',
+      profileTitle, username, supportUrl: res.headers.get('support-url') || '',
       webPageUrl: res.headers.get('profile-web-page-url') || '',
       configs, hadUserinfo: !!userinfoRaw,
     };
@@ -1324,22 +1312,21 @@ async function fetchRawSubscription(url) {
     throw e;
   }
 }
-
-// Fallback heuristic for when the panel doesn't (or can't) tell us the
-// exact status directly: a account with no expiry AND zero usage yet has
-// most likely not had its countdown started (on_hold) rather than
-// genuinely being unlimited — once they connect at least once, expire
-// either gets set for real or it truly is unlimited.
+// Only 3 statuses are surfaced: active, on_hold, and disabled.
+// - "disabled" is an admin action with no signal in the usage numbers at
+//   all, so it only ever comes from the panel telling us directly
+//   (injected data) — never guessed here.
+// - "on_hold" (countdown not started yet) IS derivable: no expiry set AND
+//   zero usage so far means the countdown almost certainly hasn't started.
+// - everything else (including a plan that's actually run out of data or
+//   time) reads as "active" — by design, per how this admin runs things.
 function deriveStatus(upload, download, total, expire) {
-  const now = Math.floor(Date.now() / 1000);
   const hasUsage = (upload + download) > 0;
-  if (expire && expire > 0 && expire < now) return 'expired';
-  if (total && total > 0 && upload + download >= total) return 'limited';
   if ((!expire || expire <= 0) && !hasUsage) return 'on_hold';
   return 'active';
 }
 function resolveStatus(injectedUser, upload, download, total, expire) {
-  const known = ['active', 'on_hold', 'limited', 'expired', 'disabled'];
+  const known = ['on_hold', 'disabled'];
   if (injectedUser && known.includes(injectedUser.status)) return injectedUser.status;
   return deriveStatus(upload, download, total, expire);
 }
@@ -1358,13 +1345,10 @@ async function loadSubscriptionData() {
     const raw = await fetchRawSubscription(subUrl);
     if (!raw.hadUserinfo && raw.configs.length === 0) throw new Error('empty response');
     const status = resolveStatus(injectedUser, raw.upload, raw.download, raw.total, raw.expire);
-    const hwidLimit = (injectedUser && injectedUser.hwidLimit !== null && injectedUser.hwidLimit !== undefined)
-      ? injectedUser.hwidLimit
-      : raw.hwidLimit;
     return {
       isSample: false,
       username: raw.username || (injectedUser && injectedUser.username) || '',
-      status, hwidLimit,
+      status,
       upload: raw.upload, download: raw.download, total: raw.total, expire: raw.expire,
       supportUrl: raw.supportUrl || (injectedUser && injectedUser.supportUrl) || '',
       subUrl, configs: raw.configs, apps: injectedApps,
@@ -1399,8 +1383,8 @@ function applyLanguage(newLang) {
 
 function renderStatusBadge(status) {
   const map = {
-    active: ['is-active', t('active')], limited: ['is-limited', t('limited')],
-    expired: ['is-expired', t('expired')], on_hold: ['is-hold', t('onHold')],
+    active: ['is-active', t('active')],
+    on_hold: ['is-hold', t('onHold')],
     disabled: ['is-expired', t('disabled')],
   };
   const [cls, label] = map[status] || ['is-unknown', t('unknown')];
@@ -1507,16 +1491,6 @@ function renderMeta(data) {
     : (data.expire ? formatDate(data.expire) : t('noExpiry'));
   el('#metaPlanLabel').textContent = t('plan');
   el('#metaPlanValue').textContent = data.total ? formatBytes(data.total) : t('unlimited');
-
-  // Only shown when we actually managed to read a device/HWID limit signal
-  // from the panel — see the comments around parseInjectedUser /
-  // fetchRawSubscription for why this can't always be found.
-  const hasHwid = data.hwidLimit !== null && data.hwidLimit !== undefined;
-  el('#metaHwidItem').classList.toggle('hidden', !hasHwid);
-  if (hasHwid) {
-    el('#metaHwidLabel').textContent = t('deviceLimit');
-    el('#metaHwidValue').textContent = data.hwidLimit > 0 ? localizeDigits(data.hwidLimit) : t('unlimited');
-  }
 }
 
 function renderActions(data) {
@@ -1671,6 +1645,7 @@ function renderBrand(data) {
 
 function renderFooter() {
   el('#footnoteSecurity').textContent = '🔒 ' + t('encryptedNote');
+  el('#footnoteYear').textContent = CONFIG.brand.creditYear || '';
   el('#footnoteCreditText').textContent = CONFIG.brand.credit || '';
   el('#footnoteCredit').href = CONFIG.brand.creditUrl || '#';
 }
